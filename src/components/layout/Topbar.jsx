@@ -12,10 +12,11 @@ import {
   ExternalLink,
   Store,
   MapPin,
-  X
+  X,
+  Smartphone
 } from 'lucide-react'
 
-export function Topbar({ onSelectOrder, onNotificationAction }) {
+export function Topbar({ activeTab = 'inicio', onNavigate, onToggleCatalog, onSelectOrder, onNotificationAction }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
@@ -47,17 +48,19 @@ export function Topbar({ onSelectOrder, onNotificationAction }) {
       unread: true,
       icon: ShoppingBag,
       iconBg: '#FDF5F5',
-      iconColor: '#731A30'
+      iconColor: '#731A30',
+      targetTab: 'solicitacoes'
     },
     {
       id: 2,
       title: 'Lembrete da Viagem a JP',
-      desc: 'Faltam 4 dias para a viagem de compras em João Pessoa (30/05).',
+      desc: 'Faltam 4 dias para a viagem de compras em João Pessoa (quinta-feira).',
       time: 'Há 2 horas',
       unread: false,
       icon: Calendar,
       iconBg: '#FDF7EB',
-      iconColor: '#C0761A'
+      iconColor: '#C0761A',
+      targetTab: 'compra-semana'
     },
     {
       id: 3,
@@ -67,19 +70,20 @@ export function Topbar({ onSelectOrder, onNotificationAction }) {
       unread: false,
       icon: DollarSign,
       iconBg: '#E7F6EC',
-      iconColor: '#1D7A47'
+      iconColor: '#1D7A47',
+      targetTab: 'financeiro'
     }
   ]
 
   const quickSearchItems = [
-    { type: 'Cliente / Pedido', name: 'Juliana Costa', code: '#MI-1048', desc: '1 item • R$ 285,00 • Confirmado' },
-    { type: 'Cliente / Pedido', name: 'Mariana Silva', code: '#MI-1045', desc: '3 itens • R$ 560,00 • Confirmado' },
-    { type: 'Cliente / Pedido', name: 'Ana Beatriz', code: '#MI-1042', desc: '2 itens • R$ 410,00 • Pagamento pendente' },
-    { type: 'Cliente / Pedido', name: 'Carla Souza', code: '#MI-1040', desc: '4 itens • R$ 730,00 • Pagamento pendente' },
-    { type: 'Cliente / Pedido', name: 'Fernanda Lima', code: '#MI-1038', desc: '1 item • R$ 299,00 • Pago' },
-    { type: 'Produto', name: 'Sandália Rasteira Trançada Dourada', code: 'Calçados', desc: 'R$ 89,90 • Custo R$ 48,00' },
-    { type: 'Produto', name: 'Bolsa Tiracolo Matelassê', code: 'Bolsas', desc: 'R$ 129,90 • Custo R$ 68,00' },
-    { type: 'Fornecedor', name: 'JP Calçados (Box 14)', code: 'João Pessoa', desc: '10 itens na lista' }
+    { type: 'Cliente / Pedido', name: 'Juliana Costa', code: '#MI-1048', desc: '1 item • R$ 285,00 • Confirmado', tab: 'vendas' },
+    { type: 'Cliente / Pedido', name: 'Mariana Silva', code: '#MI-1045', desc: '3 itens • R$ 560,00 • Confirmado', tab: 'vendas' },
+    { type: 'Cliente / Pedido', name: 'Ana Beatriz', code: '#MI-1042', desc: '2 itens • R$ 410,00 • Pagamento pendente', tab: 'vendas' },
+    { type: 'Cliente / Pedido', name: 'Carla Souza', code: '#MI-1040', desc: '4 itens • R$ 730,00 • Pagamento pendente', tab: 'vendas' },
+    { type: 'Cliente / Pedido', name: 'Fernanda Lima', code: '#MI-1038', desc: '1 item • R$ 299,00 • Pago', tab: 'vendas' },
+    { type: 'Produto', name: 'Sandália Rasteira Trançada Dourada', code: 'Calçados', desc: 'R$ 89,90 • Custo R$ 48,00', tab: 'produtos' },
+    { type: 'Produto', name: 'Bolsa Tiracolo Matelassê', code: 'Bolsas', desc: 'R$ 129,90 • Custo R$ 68,00', tab: 'produtos' },
+    { type: 'Fornecedor', name: 'JP Calçados (Box 14)', code: 'João Pessoa', desc: '10 itens na lista', tab: 'compra-semana' }
   ]
 
   const filteredSearchResults = searchQuery.trim()
@@ -108,7 +112,7 @@ export function Topbar({ onSelectOrder, onNotificationAction }) {
         <input
           type="text"
           className="search-input"
-          placeholder="Buscar por pedidos, clientes, produtos..."
+          placeholder="Buscar por pedidos, clientes, produtos ou fornecedores..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
@@ -168,6 +172,9 @@ export function Topbar({ onSelectOrder, onNotificationAction }) {
                     onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF' }}
                     onClick={() => {
                       setIsSearchOpen(false)
+                      if (onNavigate && item.tab) {
+                        onNavigate(item.tab)
+                      }
                       if (onSelectOrder) onSelectOrder(item.name)
                     }}
                   >
@@ -197,6 +204,20 @@ export function Topbar({ onSelectOrder, onNotificationAction }) {
 
       {/* Ações da Direita */}
       <div className="topbar-actions">
+        {/* Botão de Ver Catálogo Público da Cliente */}
+        {onToggleCatalog && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={onToggleCatalog}
+            style={{ fontSize: '0.78rem', padding: '8px 14px' }}
+            title="Ver catálogo que os clientes acessam pelo celular"
+          >
+            <Smartphone size={15} color="#731A30" />
+            <span>Ver Loja da Cliente</span>
+          </button>
+        )}
+
         {/* Ícone de Notificações com Dropdown Funcional */}
         <div style={{ position: 'relative' }}>
           <button
@@ -253,6 +274,9 @@ export function Topbar({ onSelectOrder, onNotificationAction }) {
                       onMouseOut={(e) => { e.currentTarget.style.backgroundColor = notif.unread && unreadCount > 0 ? '#FDF8F9' : '#FFFFFF' }}
                       onClick={() => {
                         setIsNotificationsOpen(false)
+                        if (onNavigate && notif.targetTab) {
+                          onNavigate(notif.targetTab)
+                        }
                         if (onNotificationAction) onNotificationAction(notif.title)
                       }}
                     >

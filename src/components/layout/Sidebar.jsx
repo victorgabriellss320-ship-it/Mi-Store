@@ -15,7 +15,7 @@ import {
   Settings
 } from 'lucide-react'
 
-export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
+export function Sidebar({ activeItem = 'inicio', onNavigate, onSelectSoon }) {
   const menuGroup1 = [
     { id: 'inicio', label: 'Início', icon: Home },
     { id: 'vendas', label: 'Vendas', icon: ShoppingBag },
@@ -38,7 +38,9 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
   ]
 
   const handleItemClick = (item) => {
-    if (item.id !== 'inicio' && onSelectSoon) {
+    if (onNavigate) {
+      onNavigate(item.id)
+    } else if (item.id !== 'inicio' && onSelectSoon) {
       onSelectSoon(item.label)
     }
   }
@@ -85,7 +87,7 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => handleItemClick(item)}
               >
-                <Icon size={18} strokeWidth={1.9} color="#731A30" />
+                <Icon size={18} strokeWidth={isActive ? 2.3 : 1.9} color={isActive ? '#ffffff' : '#731A30'} />
                 <span>{item.label}</span>
               </button>
             )
@@ -105,7 +107,7 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => handleItemClick(item)}
               >
-                <Icon size={18} strokeWidth={1.9} color="#731A30" />
+                <Icon size={18} strokeWidth={isActive ? 2.3 : 1.9} color={isActive ? '#ffffff' : '#731A30'} />
                 <span>{item.label}</span>
               </button>
             )
