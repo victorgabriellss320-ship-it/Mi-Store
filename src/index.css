@@ -194,6 +194,26 @@ img {
   background-color: var(--bg-app);
 }
 
+.demo-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 40px 8px;
+  padding: 10px 14px;
+  border: 1px solid #E8D7B0;
+  border-radius: var(--radius-md);
+  background: #FFFAF0;
+  color: #624D29;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.demo-notice-label {
+  color: #5A4217;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -942,6 +962,12 @@ img {
     align-items: stretch;
     gap: 12px;
     padding: 16px;
+  }
+
+  .demo-notice {
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 16px 8px;
   }
   
   .search-box {

@@ -52,7 +52,7 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
         </div>
 
         {/* Menu de Navegação */}
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" aria-label="Navegação principal">
           {menuGroup1.map((item) => {
             const Icon = item.icon
             const isActive = item.id === activeItem
@@ -62,6 +62,7 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
                 key={item.id}
                 type="button"
                 className={`sidebar-item ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => handleItemClick(item)}
               >
                 <Icon size={18} strokeWidth={isActive ? 2.3 : 1.9} color={isActive ? '#ffffff' : '#731A30'} />
@@ -81,6 +82,7 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
                 key={item.id}
                 type="button"
                 className={`sidebar-item ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => handleItemClick(item)}
               >
                 <Icon size={18} strokeWidth={1.9} color="#731A30" />
@@ -100,6 +102,7 @@ export function Sidebar({ activeItem = 'inicio', onSelectSoon }) {
                 key={item.id}
                 type="button"
                 className={`sidebar-item ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => handleItemClick(item)}
               >
                 <Icon size={18} strokeWidth={1.9} color="#731A30" />

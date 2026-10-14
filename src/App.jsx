@@ -42,6 +42,13 @@ export function App() {
           onNotificationAction={handleNotificationAction}
         />
 
+        <aside className="demo-notice" aria-label="Aviso sobre os dados do protótipo">
+          <strong className="demo-notice-label">Demonstração</strong>
+          <span>
+            Este painel usa conteúdo estático do protótipo. Indicadores, datas e ocorrências não acompanham a operação da loja.
+          </span>
+        </aside>
+
         {/* ÚNICA ABA FUNCIONAL: Início / Dashboard Completo */}
         <main>
           <DashboardOverview onToast={showToast} />
@@ -50,7 +57,7 @@ export function App() {
 
       {/* Toast informativo de ações */}
       {toastMessage && (
-        <div className="soon-toast">
+        <div className="soon-toast" role="status" aria-live="polite" aria-atomic="true">
           <Sparkles size={16} />
           <span>{toastMessage}</span>
           <button
