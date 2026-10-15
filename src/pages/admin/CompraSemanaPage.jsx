@@ -1,12 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
-import { AdminLayout } from '../../components/admin/AdminLayout'
-import { StatusBadge } from '../../components/admin/StatusBadge'
-import { Button } from '../../components/common/Button'
+import { formatBRL, cleanPhoneForWa } from '../../utils/formatters'
 import { Modal } from '../../components/common/Modal'
-import { formatBRL } from '../../utils/formatters'
 import {
   Luggage,
+  ShoppingCart,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -17,68 +15,141 @@ import {
   TrendingUp,
   MapPin,
   RefreshCw,
-  Phone
+  Phone,
+  MessageCircle,
+  Filter,
+  Check,
+  Edit2,
+  HelpCircle,
+  Store,
+  Clock,
+  ArrowRight
 } from 'lucide-react'
 
-export function CompraSemanaPage() {
-  const { currentTrip, updateTripItemStatus, suppliers } = useApp()
+// Avatares de clientes com fallback
+const CUSTOMER_AVATARS = {
+  'Maria Clara Silva': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+  'Ana Paula Medeiros': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
+  'Juliana Costa': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+  'Carla Cristina': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+  'Roberta Lima': 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=150&q=80',
+  'Camila Duarte': 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=150&q=80',
+  'Fernanda Souza': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=150&q=80',
+  'Ana Beatriz': 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=150&q=80',
+  'Carla Souza': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+  'Mariana Silva': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
+  'Sabrina F.': 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=150&q=80'
+}
+
+function getAvatar(name) {
+  return CUSTOMER_AVATARS[name] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
+}
+
+export function CompraSemanaPage({ onToast, onNavigate }) {
+  const { currentTrip, updateTripItemStatus, suppliers = [] } = useApp()
 
   const [selectedSupplierId, setSelectedSupplierId] = useState('all')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('all') // all, pending, purchased, not_found, substituted
   const [selectedItemForEdit, setSelectedItemForEdit] = useState(null)
+
+  // Form states do Modal de Ajuste de Item
   const [editStatus, setEditStatus] = useState('purchased')
   const [editCost, setEditCost] = useState('')
   const [editNotes, setEditNotes] = useState('')
   const [editSupplierId, setEditSupplierId] = useState('')
 
-  if (!currentTrip) {
-    return (
-      <AdminLayout title="Compra da Semana em João Pessoa">
-        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <Luggage size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 12px auto' }} />
-          <h3>Nenhuma viagem programada no momento</h3>
-        </div>
-      </AdminLayout>
-    )
-  }
+  const items = currentTrip?.items || []
 
-  const items = currentTrip.items || []
-
-  // Métricas dinâmicas da viagem
+  // Métricas Dinâmicas
   const totalItems = items.length
   const purchasedCount = items.filter(i => i.status === 'purchased').length
   const pendingCount = items.filter(i => i.status === 'pending').length
   const notFoundCount = items.filter(i => i.status === 'not_found').length
+  const substitutedCount = items.filter(i => i.status === 'substituted').length
 
-  const totalEstimatedCost = items.reduce((acc, i) => acc + (i.estimatedCost * i.quantity), 0)
-  const totalActualCost = items.reduce((acc, i) => {
-    const cost = i.status === 'purchased' ? (i.actualCost || i.estimatedCost) : i.estimatedCost
-    return acc + (cost * i.quantity)
-  }, 0)
-  const totalSaleValue = items.reduce((acc, i) => acc + (i.salePrice * i.quantity), 0)
+  const totalEstimatedCost = useMemo(() => {
+    return items.reduce((acc, i) => acc + ((parseFloat(i.estimatedCost) || 0) * (parseInt(i.quantity) || 1)), 0)
+  }, [items])
+
+  const totalActualCost = useMemo(() => {
+    return items.reduce((acc, i) => {
+      const cost = i.status === 'purchased' ? (parseFloat(i.actualCost) || parseFloat(i.estimatedCost) || 0) : (parseFloat(i.estimatedCost) || 0)
+      return acc + (cost * (parseInt(i.quantity) || 1))
+    }, 0)
+  }, [items])
+
+  const totalSaleValue = useMemo(() => {
+    return items.reduce((acc, i) => acc + ((parseFloat(i.salePrice) || 0) * (parseInt(i.quantity) || 1)), 0)
+  }, [items])
+
   const projectedProfit = totalSaleValue - totalActualCost
+  const progressPercent = totalItems > 0 ? Math.round((purchasedCount / totalItems) * 100) : 0
 
-  // Fornecedores presentes na viagem
-  const tripSupplierIds = Array.from(new Set(items.map(i => i.supplierId)))
-  const tripSuppliers = tripSupplierIds.map(id => suppliers.find(s => s.id === id)).filter(Boolean)
-
-  // Itens filtrados por fornecedor
-  const filteredItems = selectedSupplierId === 'all'
-    ? items
-    : items.filter(i => i.supplierId === selectedSupplierId)
-
-  const handleQuickMarkPurchased = (item) => {
-    updateTripItemStatus(item.id, {
-      status: 'purchased',
-      actualCost: item.actualCost || item.estimatedCost
+  // Fornecedores presentes na lista desta viagem
+  const tripSuppliers = useMemo(() => {
+    const suppMap = new Map()
+    items.forEach(item => {
+      const supp = suppliers.find(s => s.id === item.supplierId) || {
+        id: item.supplierId,
+        name: item.supplierName || 'Fornecedor JP',
+        city: 'João Pessoa'
+      }
+      if (!suppMap.has(supp.id)) {
+        suppMap.set(supp.id, {
+          ...supp,
+          itemsCount: 0,
+          totalCost: 0
+        })
+      }
+      const entry = suppMap.get(supp.id)
+      entry.itemsCount += item.quantity
+      entry.totalCost += (item.actualCost || item.estimatedCost) * item.quantity
     })
+    return Array.from(suppMap.values())
+  }, [items, suppliers])
+
+  // Filtragem dos Itens
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      if (selectedSupplierId !== 'all' && item.supplierId !== selectedSupplierId) return false
+      if (selectedStatusFilter !== 'all' && item.status !== selectedStatusFilter) return false
+      return true
+    })
+  }, [items, selectedSupplierId, selectedStatusFilter])
+
+  // Agrupamento por Fornecedor para Exibição
+  const groupedBySupplier = useMemo(() => {
+    const groups = {}
+    filteredItems.forEach(item => {
+      const sId = item.supplierId || 'unknown'
+      if (!groups[sId]) {
+        const suppObj = suppliers.find(s => s.id === sId)
+        groups[sId] = {
+          supplier: suppObj || { id: sId, name: item.supplierName || 'Fornecedor JP', location: 'João Pessoa' },
+          items: []
+        }
+      }
+      groups[sId].items.push(item)
+    })
+    return Object.values(groups)
+  }, [filteredItems, suppliers])
+
+  // Handlers Rápidos
+  const handleQuickMarkPurchased = (item) => {
+    const newStatus = item.status === 'purchased' ? 'pending' : 'purchased'
+    updateTripItemStatus(item.id, {
+      status: newStatus,
+      actualCost: item.actualCost !== null ? item.actualCost : item.estimatedCost
+    })
+    if (onToast) onToast(`Item "${item.productName}" marcado como ${newStatus === 'purchased' ? 'comprado' : 'a comprar'}!`)
   }
 
   const handleOpenEditModal = (item) => {
     setSelectedItemForEdit(item)
-    setEditStatus(item.status || 'purchased')
-    setEditCost(item.actualCost !== null ? item.actualCost.toString() : item.estimatedCost.toString())
+    setEditStatus(item.status || 'pending')
+    setEditCost(item.actualCost !== null && item.actualCost !== undefined ? item.actualCost.toString() : item.estimatedCost.toString())
     setEditNotes(item.notes || '')
-    setEditSupplierId(item.supplierId || '')
+    setEditSupplierId(item.supplierId || suppliers[0]?.id || '')
   }
 
   const handleSaveItemEdit = (e) => {
@@ -87,192 +158,165 @@ export function CompraSemanaPage() {
 
     updateTripItemStatus(selectedItemForEdit.id, {
       status: editStatus,
-      actualCost: parseFloat(editCost) || selectedItemForEdit.estimatedCost,
+      actualCost: editCost ? parseFloat(editCost) : selectedItemForEdit.estimatedCost,
       notes: editNotes,
-      alternativeSupplierId: editSupplierId !== selectedItemForEdit.supplierId ? editSupplierId : null
+      alternativeSupplierId: editSupplierId
     })
 
     setSelectedItemForEdit(null)
+    if (onToast) onToast('Item da viagem atualizado com sucesso!')
+  }
+
+  // Helper de Status
+  const getItemStatusBadge = (status) => {
+    switch (status) {
+      case 'purchased':
+        return <span className="status-pill status-pill-success"><CheckCircle2 size={12} /> Comprado</span>
+      case 'not_found':
+        return <span className="status-pill status-pill-warning" style={{ background: '#FDEBEB', color: '#C03C54', borderColor: '#F7D4D7' }}><XCircle size={12} /> Não encontrado</span>
+      case 'substituted':
+        return <span className="status-pill status-pill-info"><RefreshCw size={12} /> Substituído</span>
+      case 'pending':
+      default:
+        return <span className="status-pill status-pill-warning"><Clock size={12} /> A comprar</span>
+    }
   }
 
   return (
-    <AdminLayout
-      title="Compra da Semana — João Pessoa"
-      subtitle={`Checklist inteligente de compras por atacado • Viagem de ${currentTrip.date}`}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Painel de Métricas da Viagem */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1f1b1d 0%, #291e23 100%)',
-          color: '#ffffff',
-          borderRadius: 'var(--radius-xl)',
-          padding: '24px',
-          boxShadow: 'var(--shadow-md)',
-          border: '1px solid #4a3840'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-            marginBottom: '18px'
-          }}>
-            <div>
-              <span style={{
-                background: 'rgba(200, 157, 92, 0.25)',
-                color: '#f0c888',
-                border: '1px solid #c89d5c',
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                padding: '3px 10px',
-                borderRadius: '999px',
-                textTransform: 'uppercase',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <Calendar size={12} /> {currentTrip.date}
-              </span>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginTop: '6px' }}>
-                Progresso das Compras em JP
-              </h2>
-            </div>
-
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              color: '#9de0b5'
-            }}>
-              {purchasedCount} de {totalItems} peças compradas ({totalItems > 0 ? Math.round((purchasedCount / totalItems) * 100) : 0}%)
-            </div>
+    <div className="page-container" role="region" aria-label="Compra da Semana em João Pessoa">
+      {/* 1. Header da Página */}
+      <div className="page-header">
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#FDF5F5', color: '#731A30', padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '6px' }}>
+            <Calendar size={13} /> Próxima Viagem: Quinta-feira, 30 de Maio de 2025 (Em 4 dias)
           </div>
+          <h1 className="page-header-title">Compra da Semana em João Pessoa</h1>
+          <p className="page-header-subtitle">
+            Seu companheiro de viagem em JP: confira itens por fornecedor, registre custo real e garanta o lucro da loja.
+          </p>
+        </div>
+      </div>
 
-          {/* Cards de Métricas */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '14px'
-          }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#a89d96' }}>Total de Peças</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-                {totalItems} unidades
-              </div>
-              <span style={{ fontSize: '0.6875rem', color: '#f0c888' }}>
-                {pendingCount} pendentes • {notFoundCount} esgotados
-              </span>
-            </div>
-
-            <div style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#a89d96' }}>Custo Previsto vs Real</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f0b080', marginTop: '4px' }}>
-                {formatBRL(totalActualCost)}
-              </div>
-              <span style={{ fontSize: '0.6875rem', color: '#a89d96' }}>
-                Estimado inicial: {formatBRL(totalEstimatedCost)}
-              </span>
-            </div>
-
-            <div style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#a89d96' }}>Total a Arrecadar nas Vendas</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-                {formatBRL(totalSaleValue)}
-              </div>
-              <span style={{ fontSize: '0.6875rem', color: '#a89d96' }}>
-                Preço final pago pelas clientes
-              </span>
-            </div>
-
-            <div style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#a89d96' }}>Lucro Projetado da Viagem</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#88e0a3', marginTop: '4px' }}>
-                {formatBRL(projectedProfit)}
-              </div>
-              <span style={{ fontSize: '0.6875rem', color: '#88e0a3' }}>
-                Margem de {totalSaleValue > 0 ? Math.round((projectedProfit / totalSaleValue) * 100) : 0}%
-              </span>
-            </div>
+      {/* 2. Métricas da Viagem */}
+      <div className="metrics-row">
+        {/* Progresso de Peças */}
+        <div className="metric-box">
+          <span className="metric-box-title">Progresso da Viagem</span>
+          <div className="metric-box-value" style={{ color: '#731A30' }}>
+            {purchasedCount} de {totalItems} peças
           </div>
+          <div style={{ width: '100%', height: '8px', background: '#EFE8E1', borderRadius: '4px', overflow: 'hidden', marginTop: '6px' }}>
+            <div style={{ width: `${progressPercent}%`, height: '100%', background: '#1D7A47', transition: 'width 0.4s ease' }} />
+          </div>
+          <span className="metric-box-desc" style={{ marginTop: '4px' }}>
+            {progressPercent}% da lista já comprada ({pendingCount} restantes)
+          </span>
         </div>
 
-        {/* Abas dos Fornecedores em JP */}
-        <div className="card" style={{ padding: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-secondary)', marginRight: '6px' }}>
-              Filtrar por Fornecedor:
-            </span>
+        {/* Custo Total */}
+        <div className="metric-box">
+          <span className="metric-box-title">Custo Total de Compras</span>
+          <div className="metric-box-value">
+            {formatBRL(totalActualCost)}
+          </div>
+          <span className="metric-box-desc">
+            Estimado inicial: {formatBRL(totalEstimatedCost)}
+          </span>
+        </div>
 
+        {/* Faturamento e Lucro */}
+        <div className="metric-box" style={{ borderLeft: '4px solid #1D7A47' }}>
+          <span className="metric-box-title">Lucro Projetado da Viagem</span>
+          <div className="metric-box-value" style={{ color: '#1D7A47' }}>
+            {formatBRL(projectedProfit)}
+          </div>
+          <span className="metric-box-desc">
+            Valor de venda: {formatBRL(totalSaleValue)} (Margem {Math.round((projectedProfit / (totalSaleValue || 1)) * 100)}%)
+          </span>
+        </div>
+
+        {/* Itens com Alerta */}
+        <div className="metric-box">
+          <span className="metric-box-title">Itens Não Encontrados</span>
+          <div className="metric-box-value" style={{ color: notFoundCount > 0 ? '#C03C54' : 'var(--text-secondary)' }}>
+            {notFoundCount}
+          </div>
+          <span className="metric-box-desc">
+            {substitutedCount} itens substituídos
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Filtros por Fornecedor (Agrupamento Inicial) */}
+      <div className="filters-bar" style={{ gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#731A30', textTransform: 'uppercase' }}>
+            Fornecedores em JP:
+          </span>
+
+          <button
+            type="button"
+            className={`filter-pill ${selectedSupplierId === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedSupplierId('all')}
+          >
+            Todos ({items.length})
+          </button>
+
+          {tripSuppliers.map(supp => (
             <button
+              key={supp.id}
               type="button"
-              onClick={() => setSelectedSupplierId('all')}
-              style={{
-                padding: '7px 14px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                border: selectedSupplierId === 'all' ? '1px solid var(--color-primary)' : '1px solid var(--border-subtle)',
-                background: selectedSupplierId === 'all' ? 'var(--color-primary)' : 'var(--bg-surface)',
-                color: selectedSupplierId === 'all' ? '#ffffff' : 'var(--text-secondary)',
-                whiteSpace: 'nowrap'
-              }}
+              className={`filter-pill ${selectedSupplierId === supp.id ? 'active' : ''}`}
+              onClick={() => setSelectedSupplierId(supp.id)}
             >
-              Todos ({items.length})
+              <Store size={13} />
+              <span>{supp.name} ({supp.itemsCount})</span>
             </button>
-
-            {tripSuppliers.map(supp => {
-              const count = items.filter(i => i.supplierId === supp.id).length
-              const isSelected = selectedSupplierId === supp.id
-
-              return (
-                <button
-                  key={supp.id}
-                  type="button"
-                  onClick={() => setSelectedSupplierId(supp.id)}
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--border-subtle)',
-                    background: isSelected ? 'var(--color-primary)' : 'var(--bg-surface)',
-                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Building2 size={13} />
-                  <span>{supp.name}</span>
-                  <span style={{
-                    fontSize: '0.6875rem',
-                    padding: '1px 6px',
-                    borderRadius: '999px',
-                    background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface-subtle)',
-                    color: isSelected ? '#fff' : 'inherit'
-                  }}>
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          ))}
         </div>
 
-        {/* Informações do Fornecedor Ativo se filtrado */}
-        {selectedSupplierId !== 'all' && (
-          (() => {
-            const currentSupp = suppliers.find(s => s.id === selectedSupplierId)
-            if (!currentSupp) return null
-            return (
+        {/* Filtro secundário por status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px', paddingTop: '8px', borderTop: '1px solid #ECE5DE', width: '100%' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Status:</span>
+          {[
+            { id: 'all', label: 'Todos os Status' },
+            { id: 'pending', label: 'A Comprar' },
+            { id: 'purchased', label: 'Comprados' },
+            { id: 'not_found', label: 'Não Encontrados' },
+            { id: 'substituted', label: 'Substituídos' }
+          ].map(st => (
+            <button
+              key={st.id}
+              type="button"
+              className={`filter-pill ${selectedStatusFilter === st.id ? 'active' : ''}`}
+              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+              onClick={() => setSelectedStatusFilter(st.id)}
+            >
+              {st.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Lista Agrupada por Fornecedor */}
+      {filteredItems.length === 0 ? (
+        <div className="empty-state-box">
+          <div className="empty-state-icon">
+            <Luggage size={24} />
+          </div>
+          <div className="empty-state-title">Nenhum item com este filtro</div>
+          <div className="empty-state-desc">
+            Todos os itens deste fornecedor ou status já foram tratados ou não há peças correspondentes.
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {groupedBySupplier.map(group => (
+            <div key={group.supplier.id} className="table-card" style={{ padding: 0, overflow: 'hidden' }}>
+              {/* Header do Fornecedor */}
               <div style={{
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
+                background: '#FAF7F5',
+                borderBottom: '1px solid #ECE5DE',
                 padding: '14px 18px',
                 display: 'flex',
                 alignItems: 'center',
@@ -280,279 +324,326 @@ export function CompraSemanaPage() {
                 flexWrap: 'wrap',
                 gap: '10px'
               }}>
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {currentSupp.name}
-                  </h4>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={13} style={{ color: 'var(--color-primary)' }} />
-                    <span>{currentSupp.address} • Box {currentSupp.boxNumber || 'Geral'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FCEEEE', color: '#731A30', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Store size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#2A2426', margin: 0 }}>
+                      {group.supplier.name}
+                    </h3>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <MapPin size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {group.supplier.location || group.supplier.address || 'João Pessoa - PB'}
+                      {group.supplier.whatsapp && (
+                        <span> • Tel: {group.supplier.whatsapp}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {currentSupp.whatsapp && (
-                  <a
-                    href={`https://wa.me/55${currentSupp.whatsapp.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-sm"
-                    style={{ backgroundColor: '#25D366', color: '#fff', gap: '6px' }}
-                  >
-                    <Phone size={14} /> Contato Fornecedor ({currentSupp.contactName || currentSupp.whatsapp})
-                  </a>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {group.supplier.whatsapp && (
+                    <a
+                      href={`https://wa.me/55${cleanPhoneForWa(group.supplier.whatsapp)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-whatsapp"
+                      style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+                    >
+                      <MessageCircle size={12} /> WhatsApp Fornecedor
+                    </a>
+                  )}
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#731A30', background: '#FFF0F2', padding: '4px 10px', borderRadius: '12px', border: '1px solid #FAD1D6' }}>
+                    {group.items.reduce((acc, i) => acc + i.quantity, 0)} peça(s) a buscar
+                  </span>
+                </div>
               </div>
-            )
-          })()
-        )}
 
-        {/* Checklist dos Itens da Viagem */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '16px'
-        }}>
-          {filteredItems.map(item => {
-            const isPurchased = item.status === 'purchased'
-            const isNotFound = item.status === 'not_found'
-            const hasPriceDiff = item.actualCost && item.actualCost !== item.estimatedCost
+              {/* Tabela de Itens deste Fornecedor */}
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px', textAlign: 'center' }}>OK</th>
+                      <th>Produto / Variação</th>
+                      <th>Qtd</th>
+                      <th>Cliente Relacionada</th>
+                      <th>Custo Estimado</th>
+                      <th>Custo Real Observado</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map(item => {
+                      const avatarUrl = getAvatar(item.customerName)
+                      const isBought = item.status === 'purchased'
 
-            return (
-              <div
-                key={item.id}
-                className="card"
-                style={{
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderLeft: isPurchased ? '5px solid #28a745' : isNotFound ? '5px solid #dc3545' : '5px solid #c89d5c'
-                }}
-              >
-                <div>
-                  {/* Top: Status Badge + Fornecedor */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                      {item.supplierName}
-                    </span>
-                    <StatusBadge status={item.status} type="shopping" />
-                  </div>
+                      return (
+                        <tr
+                          key={item.id}
+                          style={{
+                            backgroundColor: isBought ? '#F9FDF9' : item.status === 'not_found' ? '#FFF8F8' : 'transparent',
+                            opacity: isBought ? 0.85 : 1
+                          }}
+                        >
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isBought}
+                              onChange={() => handleQuickMarkPurchased(item)}
+                              style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#731A30' }}
+                              title="Marcar como comprado"
+                            />
+                          </td>
 
-                  {/* Informações da Peça */}
-                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                    <img
-                      src={item.image}
-                      alt={item.productName}
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <img
+                                src={item.image}
+                                alt={item.productName}
+                                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #ECE5DE' }}
+                              />
+                              <div>
+                                <strong style={{ fontSize: '0.875rem', color: isBought ? '#1D7A47' : 'var(--text-primary)', textDecoration: isBought ? 'line-through' : 'none' }}>
+                                  {item.productName}
+                                </strong>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  Tam: <strong>{item.size}</strong> | Cor: <strong>{item.color}</strong>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                            {item.quantity}x
+                          </td>
+
+                          <td>
+                            <div className="client-cell">
+                              <img src={avatarUrl} alt={item.customerName} className="client-avatar" />
+                              <div>
+                                <span className="client-name">{item.customerName}</span>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.saleCode}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                              {formatBRL(item.estimatedCost)}
+                            </span>
+                          </td>
+
+                          <td>
+                            {item.actualCost !== null && item.actualCost !== undefined ? (
+                              <strong style={{ fontSize: '0.9rem', color: '#731A30' }}>
+                                {formatBRL(item.actualCost)}
+                              </strong>
+                            ) : (
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                A informar
+                              </span>
+                            )}
+                          </td>
+
+                          <td>{getItemStatusBadge(item.status)}</td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => handleOpenEditModal(item)}
+                              style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                              title="Ajustar custo real, fornecedor ou status"
+                            >
+                              <Edit2 size={13} />
+                              <span>Ajustar</span>
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Cards Mobile para os Itens do Fornecedor */}
+              <div className="mobile-order-cards" style={{ padding: '12px' }}>
+                {group.items.map(item => {
+                  const avatarUrl = getAvatar(item.customerName)
+                  const isBought = item.status === 'purchased'
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="mobile-order-card"
                       style={{
-                        width: '74px',
-                        height: '74px',
-                        borderRadius: 'var(--radius-md)',
-                        objectFit: 'cover',
-                        border: '1px solid var(--border-subtle)'
+                        backgroundColor: isBought ? '#F9FDF9' : item.status === 'not_found' ? '#FFF8F8' : '#FFFFFF',
+                        borderLeft: isBought ? '4px solid #1D7A47' : '1px solid #ECE5DE'
                       }}
-                    />
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.25 }}>
-                        {item.productName}
-                      </h4>
-
-                      <div style={{ display: 'flex', gap: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', flexWrap: 'wrap' }}>
-                        {item.size && item.size !== 'Único' && (
-                          <span style={{ background: 'var(--bg-surface-subtle)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                            Tam: {item.size}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="checkbox"
+                            checked={isBought}
+                            onChange={() => handleQuickMarkPurchased(item)}
+                            style={{ width: '22px', height: '22px', accentColor: '#731A30' }}
+                          />
+                          <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isBought ? '#1D7A47' : '#2A2426' }}>
+                            {isBought ? '✓ Comprado' : 'A Comprar'}
                           </span>
-                        )}
-                        {item.color && (
-                          <span style={{ background: 'var(--bg-surface-subtle)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                            Cor: {item.color}
-                          </span>
-                        )}
-                        <span style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                          {item.quantity} un
-                        </span>
+                        </div>
+                        {getItemStatusBadge(item.status)}
                       </div>
 
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                        <strong>Destino:</strong> {item.customerName}
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', margin: '4px 0' }}>
+                        <img src={item.image} alt={item.productName} style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{item.productName}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            Tamanho: <strong>{item.size}</strong> | Cor: <strong>{item.color}</strong> | Qtd: <strong>{item.quantity}</strong>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#731A30', marginTop: '2px' }}>
+                            Custo Real: {item.actualCost ? formatBRL(item.actualCost) : formatBRL(item.estimatedCost)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #F6F1EC' }}>
+                        <div className="client-cell">
+                          <img src={avatarUrl} alt={item.customerName} className="client-avatar" style={{ width: '26px', height: '26px' }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{item.customerName}</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => handleOpenEditModal(item)}
+                          style={{ padding: '5px 10px', fontSize: '0.72rem' }}
+                        >
+                          <Edit2 size={12} /> Ajustar Custo
+                        </button>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Custo e Lucro deste item */}
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '8px 10px',
-                    background: 'var(--bg-surface-subtle)',
-                    borderRadius: 'var(--radius-sm)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '0.8125rem'
-                  }}>
-                    <div>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', display: 'block' }}>Custo Previsto:</span>
-                      <strong>{formatBRL(item.estimatedCost)}</strong>
-                    </div>
-
-                    <div>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', display: 'block' }}>Custo Real Pago:</span>
-                      <strong style={{ color: hasPriceDiff ? 'var(--color-primary)' : 'inherit' }}>
-                        {formatBRL(item.actualCost || item.estimatedCost)}
-                      </strong>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', display: 'block' }}>Venda Cliente:</span>
-                      <strong style={{ color: 'var(--color-primary)' }}>{formatBRL(item.salePrice)}</strong>
-                    </div>
-                  </div>
-
-                  {item.notes && (
-                    <div style={{ fontSize: '0.75rem', color: '#8c5d1c', marginTop: '6px', fontStyle: 'italic' }}>
-                      Nota: {item.notes}
-                    </div>
-                  )}
-                </div>
-
-                {/* Ações Rápidas no Card */}
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  marginTop: '14px',
-                  paddingTop: '12px',
-                  borderTop: '1px solid var(--border-subtle)'
-                }}>
-                  {item.status !== 'purchased' ? (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      icon={CheckCircle2}
-                      onClick={() => handleQuickMarkPurchased(item)}
-                      style={{ flex: 1 }}
-                    >
-                      Comprado
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="soft"
-                      size="sm"
-                      icon={RefreshCw}
-                      onClick={() => handleOpenEditModal(item)}
-                      style={{ flex: 1 }}
-                    >
-                      Ajustar Custo
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenEditModal(item)}
-                  >
-                    Opções
-                  </Button>
-                </div>
+                  )
+                })}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
+      )}
 
-        {/* Modal de Ajuste de Custo Real / Status do Item */}
+      {/* MODAL: Ajustar Item da Viagem (Custo Real, Troca de Fornecedor, Status) */}
+      {selectedItemForEdit && (
         <Modal
-          isOpen={!!selectedItemForEdit}
+          isOpen={true}
           onClose={() => setSelectedItemForEdit(null)}
-          title={`Atualizar Item da Compra`}
+          title="Ajustar Item da Compra"
+          maxWidth="560px"
         >
-          {selectedItemForEdit && (
-            <form onSubmit={handleSaveItemEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSaveItemEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: '#FDF9F7', padding: '12px', borderRadius: '8px', border: '1px solid #ECE5DE' }}>
+              <img src={selectedItemForEdit.image} alt={selectedItemForEdit.productName} style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }} />
               <div>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {selectedItemForEdit.productName}
-                </h4>
-                <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                  Tam: {selectedItemForEdit.size} • Cor: {selectedItemForEdit.color} • Cliente: {selectedItemForEdit.customerName}
+                <strong style={{ fontSize: '0.95rem' }}>{selectedItemForEdit.productName}</strong>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  Tam {selectedItemForEdit.size} | Cor {selectedItemForEdit.color} | Qtd: {selectedItemForEdit.quantity}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#731A30', fontWeight: 600 }}>
+                  Cliente: {selectedItemForEdit.customerName} ({selectedItemForEdit.saleCode})
                 </div>
               </div>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Situação na Viagem</label>
-                <select
-                  className="form-select"
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value)}
-                >
-                  <option value="purchased">Comprado com Sucesso</option>
-                  <option value="price_changed">Preço no Fornecedor Alterado</option>
-                  <option value="not_found">Não Encontrado / Sem Estoque</option>
-                  <option value="substituted">Substituído por Modelo/Fornecedor Alternativo</option>
-                  <option value="pending">Ainda Pendente</option>
-                </select>
-              </div>
+            {/* Status do Item (Os 4 Estados Obrigatórios) */}
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Status do Item na Viagem:
+              </label>
+              <select
+                className="search-input"
+                style={{ height: '42px', padding: '0 12px', marginTop: '4px' }}
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+              >
+                <option value="pending">A comprar (Aguardando)</option>
+                <option value="purchased">✓ Comprado</option>
+                <option value="not_found">✕ Não encontrado</option>
+                <option value="substituted">⇄ Substituído</option>
+              </select>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Custo Real Efetivamente Pago (R$) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-input"
-                  value={editCost}
-                  onChange={(e) => setEditCost(e.target.value)}
-                  placeholder="Ex: 48,00"
-                  required
-                />
-                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                  Custo previsto original era: {formatBRL(selectedItemForEdit.estimatedCost)}. Ao alterar, o lucro da viagem é recalculado instantaneamente.
-                </span>
-              </div>
+            {/* Custo Real Observado */}
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Custo Real Pago ao Fornecedor (R$ por unidade):
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                className="search-input"
+                style={{ height: '42px', padding: '0 12px', marginTop: '4px' }}
+                value={editCost}
+                onChange={(e) => setEditCost(e.target.value)}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Custo estimado inicial era: {formatBRL(selectedItemForEdit.estimatedCost)}. Ao alterar, o lucro da loja é recalculado na hora.
+              </span>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Fornecedor onde foi Comprado</label>
-                <select
-                  className="form-select"
-                  value={editSupplierId}
-                  onChange={(e) => setEditSupplierId(e.target.value)}
-                >
-                  {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.address})</option>
-                  ))}
-                </select>
-              </div>
+            {/* Troca de Fornecedor */}
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Fornecedor em João Pessoa:
+              </label>
+              <select
+                className="search-input"
+                style={{ height: '42px', padding: '0 12px', marginTop: '4px' }}
+                value={editSupplierId}
+                onChange={(e) => setEditSupplierId(e.target.value)}
+              >
+                {suppliers.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.location || s.city})
+                  </option>
+                ))}
+              </select>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Encontrou em outro box da galeria? Mude o fornecedor aqui para salvar onde comprou.
+              </span>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Observações da Compra (Opcional)</label>
-                <textarea
-                  className="form-textarea"
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="Ex: Comprado no box vizinho pois o principal estava fechado."
-                  style={{ minHeight: '60px' }}
-                />
-              </div>
+            {/* Observação */}
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Observação:</label>
+              <input
+                type="text"
+                className="search-input"
+                style={{ height: '38px', padding: '0 12px', marginTop: '4px' }}
+                placeholder="Ex: Peguei tamanho 37 porque não tinha 36"
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+              />
+            </div>
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setSelectedItemForEdit(null)}
-                  style={{ flex: 1 }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  icon={CheckCircle2}
-                  style={{ flex: 2 }}
-                >
-                  Salvar Atualização
-                </Button>
-              </div>
-            </form>
-          )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedItemForEdit(null)}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary">
+                <Check size={16} /> Salvar Alterações
+              </button>
+            </div>
+          </form>
         </Modal>
-      </div>
-    </AdminLayout>
+      )}
+    </div>
   )
 }

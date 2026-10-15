@@ -147,7 +147,7 @@ export function AppProvider({ children }) {
       return [...prev, newItem]
     })
 
-    showToast(`"${product.name}" adicionado à sua encomenda!`)
+    showToast(`"${product.name}" adicionado à sacola de demonstração.`)
   }
 
   const removeFromCart = (cartItemId) => {
@@ -370,6 +370,131 @@ export function AppProvider({ children }) {
     showToast('Solicitação cancelada com sucesso.')
   }
 
+
+  // Anotar Nova Venda Direta
+  const addSale = (saleData) => {
+    const saleCode = generateSaleCode()
+    const subtotal = saleData.items.reduce((acc, i) => acc + (parseFloat(i.unitPrice) * parseInt(i.quantity)), 0)
+    const deliveryFee = parseFloat(saleData.deliveryFee) || 0
+    const total = subtotal + deliveryFee
+    const totalPaid = parseFloat(saleData.initialPayment) || 0
+    const balanceDue = Math.max(0, total - totalPaid)
+    const estimatedCost = saleData.items.reduce((acc, i) => acc + ((parseFloat(i.estimatedCost) || parseFloat(i.unitPrice) * 0.5) * parseInt(i.quantity)), 0)
+
+    const payments = totalPaid > 0 ? [{
+      id: `pay-${Date.now()}`,
+      amount: totalPaid,
+      method: saleData.paymentMethod || 'Pix',
+      date: new Date().toISOString(),
+      note: 'Entrada registrada no momento da venda'
+    }] : []
+
+    const saleId = `sale-${Date.now()}`
+
+    const newSale = {
+      id: saleId,
+      code: saleCode,
+      customerId: saleData.customerId || `cust-${Date.now()}`,
+      customerName: saleData.customerName,
+      customerPhone: saleData.customerPhone,
+      customerCity: saleData.customerCity || 'Cuité de Mamanguape',
+      customerAddress: saleData.customerAddress || 'Retirada na Loja',
+      createdAt: new Date().toISOString(),
+      status: 'awaiting_purchase',
+      deliveryType: saleData.deliveryType || 'pickup',
+      deliveryFee,
+      subtotal,
+      total,
+      estimatedCost,
+      actualCost: null,
+      totalPaid,
+      balanceDue,
+      paymentPlan: balanceDue === 0 ? 'full' : totalPaid > 0 ? 'partial' : 'fiado_total',
+      dueDate: balanceDue > 0 ? new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0] : null,
+      payments,
+      items: saleData.items.map((i, index) => ({
+        id: `sitem-${Date.now()}-${index}`,
+        productId: i.productId || `prod-${Date.now()}`,
+        productName: i.productName,
+        image: i.image || 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=400&q=80',
+        size: i.size || '36',
+        color: i.color || 'Padrão',
+        quantity: parseInt(i.quantity) || 1,
+        unitPrice: parseFloat(i.unitPrice),
+        estimatedCost: parseFloat(i.estimatedCost) || (parseFloat(i.unitPrice) * 0.5),
+        actualCost: null,
+        supplierId: i.supplierId || 'supp-1',
+        shoppingStatus: 'pending'
+      })),
+      notes: saleData.notes || ''
+    }
+
+    setSales(prev => [newSale, ...prev])
+
+    // Adiciona na Compra da Semana
+    const newTripItems = newSale.items.map(item => {
+      const supplierObj = suppliers.find(s => s.id === item.supplierId)
+      return {
+        id: `trip-item-${Date.now()}-${Math.random()}`,
+        saleId: newSale.id,
+        saleCode: newSale.code,
+        customerName: newSale.customerName,
+        productId: item.productId,
+        productName: item.productName,
+        image: item.image,
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+        salePrice: item.unitPrice,
+        estimatedCost: item.estimatedCost,
+        actualCost: null,
+        supplierId: item.supplierId,
+        supplierName: supplierObj ? supplierObj.name : 'Fornecedor JP',
+        status: 'pending',
+        notes: `Cliente: ${newSale.customerName}`
+      }
+    })
+
+    setCurrentTrip(prev => ({
+      ...prev,
+      items: [...prev.items, ...newTripItems]
+    }))
+
+    // Se cliente já existe, atualiza seu débito; se não, cadastra cliente
+    if (balanceDue > 0) {
+      setCustomers(prev => {
+        const existing = prev.find(c => c.id === saleData.customerId || c.name.toLowerCase() === saleData.customerName.toLowerCase())
+        if (existing) {
+          return prev.map(c => c.id === existing.id ? {
+            ...c,
+            currentDebt: (c.currentDebt || 0) + balanceDue,
+            debtDueDate: newSale.dueDate,
+            totalOrders: (c.totalOrders || 0) + 1,
+            totalSpent: (c.totalSpent || 0) + total
+          } : c)
+        } else {
+          const newCust = {
+            id: saleData.customerId || `cust-${Date.now()}`,
+            name: saleData.customerName,
+            whatsapp: saleData.customerPhone,
+            city: saleData.customerCity || 'Cuité de Mamanguape',
+            address: saleData.customerAddress || 'Retirada na Loja',
+            reference: '',
+            totalOrders: 1,
+            totalSpent: total,
+            currentDebt: balanceDue,
+            debtDueDate: newSale.dueDate,
+            notes: 'Cadastrada no registro de venda.'
+          }
+          return [newCust, ...prev]
+        }
+      })
+    }
+
+    showToast(`Venda ${saleCode} anotada e enviada para a Compra da Semana!`)
+    return newSale
+  }
+
   // Ações de Vendas
   const updateSaleStatus = (saleId, newStatus) => {
     setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: newStatus } : s))
@@ -510,6 +635,11 @@ export function AppProvider({ children }) {
     showToast('Produto atualizado com sucesso!')
   }
 
+  const deleteProduct = (productId) => {
+    setProducts(prev => prev.filter(p => p.id !== productId))
+    showToast('Produto removido com sucesso!')
+  }
+
   const toggleProductVisibility = (productId) => {
     setProducts(prev => prev.map(p => {
       if (p.id === productId) {
@@ -519,6 +649,27 @@ export function AppProvider({ children }) {
       }
       return p
     }))
+  }
+
+  // Gestão de Clientes
+  const addCustomer = (customerData) => {
+    const newCust = {
+      ...customerData,
+      id: customerData.id || `cust-${Date.now()}`,
+      totalOrders: customerData.totalOrders || 0,
+      totalSpent: parseFloat(customerData.totalSpent) || 0,
+      currentDebt: parseFloat(customerData.currentDebt) || 0,
+      debtDueDate: customerData.debtDueDate || null,
+      notes: customerData.notes || ''
+    }
+    setCustomers(prev => [newCust, ...prev])
+    showToast(`Cliente "${newCust.name}" cadastrada com sucesso!`)
+    return newCust
+  }
+
+  const updateCustomer = (customerId, updatedData) => {
+    setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, ...updatedData } : c))
+    showToast('Dados da cliente atualizados com sucesso!')
   }
 
   // Gestão de Fornecedores
@@ -531,6 +682,17 @@ export function AppProvider({ children }) {
     }
     setSuppliers(prev => [...prev, newSupp])
     showToast(`Fornecedor "${newSupp.name}" adicionado com sucesso!`)
+    return newSupp
+  }
+
+  const updateSupplier = (supplierId, updatedData) => {
+    setSuppliers(prev => prev.map(s => s.id === supplierId ? { ...s, ...updatedData } : s))
+    showToast('Fornecedor atualizado com sucesso!')
+  }
+
+  const deleteSupplier = (supplierId) => {
+    setSuppliers(prev => prev.filter(s => s.id !== supplierId))
+    showToast('Fornecedor removido com sucesso!')
   }
 
   // Gestão de Despesas
@@ -621,15 +783,21 @@ export function AppProvider({ children }) {
       submitOrderRequest,
 
       // Ações Admin
+      addSale,
       confirmOrderRequest,
       cancelOrderRequest,
       updateSaleStatus,
       recordPayment,
       updateTripItemStatus,
+      addCustomer,
+      updateCustomer,
       addProduct,
       updateProduct,
+      deleteProduct,
       toggleProductVisibility,
       addSupplier,
+      updateSupplier,
+      deleteSupplier,
       addExpense,
       deleteExpense,
       updateSettings,

@@ -1,0 +1,23 @@
+.public-catalog {
+  width: 100%;
+  min-width: 0;
+}
+
+.public-catalog .container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 32px);
+}
+
+.public-catalog-search-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.public-catalog-search-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}

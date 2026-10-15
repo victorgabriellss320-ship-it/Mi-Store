@@ -2,6 +2,15 @@ import React, { useState } from 'react'
 import { Sidebar } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
 import { DashboardOverview } from './pages/dashboard/DashboardOverview'
+import { PedidosPage } from './pages/admin/PedidosPage'
+import { CompraSemanaPage } from './pages/admin/CompraSemanaPage'
+import { EntregasPage } from './pages/admin/EntregasPage'
+import { ProdutosPage } from './pages/admin/ProdutosPage'
+import { ClientesPage } from './pages/admin/ClientesPage'
+import { FornecedoresPage } from './pages/admin/FornecedoresPage'
+import { FinanceiroPage } from './pages/admin/FinanceiroPage'
+import { RelatoriosPage } from './pages/admin/RelatoriosPage'
+import { ConfiguracoesPage } from './pages/admin/ConfiguracoesPage'
 import { CatalogPage } from './pages/catalog/CatalogPage'
 import { useApp } from './context/AppContext'
 import { Sparkles, X, RotateCcw, ArrowLeft, Clock, CheckCircle } from 'lucide-react'
@@ -36,8 +45,9 @@ export function App() {
   const handleNavigate = (tabId) => {
     setActiveTab(tabId)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    if (tabId !== 'inicio') {
-      showToast(`Aba "${TAB_LABELS[tabId] || tabId}" programada para a próxima etapa.`)
+    const implementedTabs = ['inicio', 'pedidos', 'compra-semana', 'entregas', 'produtos', 'clientes', 'fornecedores', 'financeiro', 'relatorios', 'configuracoes'];
+    if (!implementedTabs.includes(tabId)) {
+      showToast(`Aba "${TAB_LABELS[tabId] || tabId}" em desenvolvimento na próxima etapa.`)
     }
   }
 
@@ -61,7 +71,7 @@ export function App() {
     <div className="app-container">
       {/* Sidebar Fixa à Esquerda (10 Abas Canônicas) */}
       <Sidebar
-        activeItem={activeTab}
+        activeItem={activeTab === 'inicio' ? 'inicio' : null}
         onNavigate={handleNavigate}
       />
 
@@ -81,7 +91,7 @@ export function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <strong className="demo-notice-label">M_I Store Gestão</strong>
             <span>
-              Desenvolvimento rigoroso por etapas: <strong>Aba Início 100% concluída e operacional</strong>.
+              <strong>Protótipo em desenvolvimento.</strong> Os dados exibidos são fictícios e servem apenas para demonstração.
             </span>
           </div>
           <button
@@ -111,6 +121,24 @@ export function App() {
         <main>
           {activeTab === 'inicio' ? (
             <DashboardOverview onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'pedidos' ? (
+            <PedidosPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'compra-semana' ? (
+            <CompraSemanaPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'entregas' ? (
+            <EntregasPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'produtos' ? (
+            <ProdutosPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'clientes' ? (
+            <ClientesPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'fornecedores' ? (
+            <FornecedoresPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'financeiro' ? (
+            <FinanceiroPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'relatorios' ? (
+            <RelatoriosPage onToast={showToast} onNavigate={handleNavigate} />
+          ) : activeTab === 'configuracoes' ? (
+            <ConfiguracoesPage onToast={showToast} onNavigate={handleNavigate} />
           ) : (
             <div className="page-container" style={{ paddingTop: '20px' }}>
               <div style={{
@@ -146,7 +174,7 @@ export function App() {
                     Aba {TAB_LABELS[activeTab] || activeTab}
                   </h2>
                   <p style={{ fontSize: '0.875rem', color: '#7A7067', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
-                    O sistema da M_I Store está sendo desenvolvido estritamente <strong>uma aba por vez</strong> com altíssima qualidade visual, funcionalidade real e responsividade completa. A aba <strong>Início</strong> já está 100% pronta.
+                    Esta área será preparada em uma próxima etapa. Por enquanto, a demonstração da M_I Store está disponível na aba <strong>Início</strong> e usa dados fictícios.
                   </p>
                 </div>
 
