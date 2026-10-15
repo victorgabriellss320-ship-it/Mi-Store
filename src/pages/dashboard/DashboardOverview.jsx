@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   FileText,
   ShoppingCart,
@@ -21,11 +21,16 @@ import {
   Building2,
   MapPin,
   Check,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react'
 import { Modal } from '../../components/common/Modal'
 
-export function DashboardOverview({ onToast }) {
+export function DashboardOverview({ onToast, onNavigate }) {
+  // Estado de Carregamento (Loading Skeleton)
+  const [isLoading, setIsLoading] = useState(false)
+
   // 1. Estados Dinâmicos dos Contadores Operacionais
   const [solicitacoesCount, setSolicitacoesCount] = useState(8)
   const [comprasCount, setComprasCount] = useState(24)
@@ -37,58 +42,75 @@ export function DashboardOverview({ onToast }) {
   const [isPeriodOpen, setIsPeriodOpen] = useState(false)
 
   // 3. Controle de Modais Operacionais
-  const [activeModal, setActiveModal] = useState(null) // 'solicitacoes', 'compras', 'prontos', 'pendentes', 'compra_detalhes', 'calendario', 'pedido_detalhe'
+  const [activeModal, setActiveModal] = useState(null)
   const [selectedOrderForModal, setSelectedOrderForModal] = useState(null)
 
-  // Dados Financeiros por Período
-  const financialPeriods = {
-    'Este mês (Maio)': {
-      vendas: 'R$ 12.850,00',
-      pedidos: '48 pedidos',
-      recebido: 'R$ 8.420,00',
-      recebidoPct: '66% do total',
-      aReceber: 'R$ 4.430,00',
-      aReceberPct: '34% do total',
-      custo: 'R$ 5.200,00',
-      custoPct: '40% das vendas',
-      custoBarPct: 40,
-      lucro: 'R$ 7.650,00',
-      lucroPct: '60% das vendas',
-      lucroBarPct: 60
-    },
-    'Mês anterior (Abril)': {
-      vendas: 'R$ 10.900,00',
-      pedidos: '42 pedidos',
-      recebido: 'R$ 10.450,00',
-      recebidoPct: '96% do total',
-      aReceber: 'R$ 450,00',
-      aReceberPct: '4% do total',
-      custo: 'R$ 4.360,00',
-      custoPct: '40% das vendas',
-      custoBarPct: 40,
-      lucro: 'R$ 6.540,00',
-      lucroPct: '60% das vendas',
-      lucroBarPct: 60
-    },
-    'Últimos 90 dias': {
-      vendas: 'R$ 34.200,00',
-      pedidos: '128 pedidos',
-      recebido: 'R$ 29.320,00',
-      recebidoPct: '86% do total',
-      aReceber: 'R$ 4.880,00',
-      aReceberPct: '14% do total',
-      custo: 'R$ 13.680,00',
-      custoPct: '40% das vendas',
-      custoBarPct: 40,
-      lucro: 'R$ 20.520,00',
-      lucroPct: '60% das vendas',
-      lucroBarPct: 60
+  // Fechar modal ao pressionar ESC
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActiveModal(null)
+        setSelectedOrderForModal(null)
+      }
     }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Simular recarregamento com Skeleton
+  const handleRefresh = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setIsLoading(false)
+      if (onToast) onToast('Painel operacional atualizado com sucesso!')
+    }, 600)
   }
 
-  const currentFin = financialPeriods[selectedPeriod] || financialPeriods['Este mês (Maio)']
+  // Dados Financeiros por Período
+  const [financialData, setFinancialData] = useState({
+    'Este mês (Maio)': {
+      vendas: 12850,
+      pedidos: '48 pedidos',
+      recebido: 8420,
+      aReceber: 4430,
+      custo: 5200,
+      lucro: 7650
+    },
+    'Mês anterior (Abril)': {
+      vendas: 10900,
+      pedidos: '42 pedidos',
+      recebido: 10450,
+      aReceber: 450,
+      custo: 4360,
+      lucro: 6540
+    },
+    'Últimos 90 dias': {
+      vendas: 34200,
+      pedidos: '128 pedidos',
+      recebido: 29320,
+      aReceber: 4880,
+      custo: 13680,
+      lucro: 20520
+    }
+  })
 
-  // Lista Dinâmica de Pedidos Recentes
+  const currentRaw = financialData[selectedPeriod] || financialData['Este mês (Maio)']
+  const currentFin = {
+    vendas: `R$ ${currentRaw.vendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    pedidos: currentRaw.pedidos,
+    recebido: `R$ ${currentRaw.recebido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    recebidoPct: `${Math.round((currentRaw.recebido / currentRaw.vendas) * 100)}% do total`,
+    aReceber: `R$ ${currentRaw.aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    aReceberPct: `${Math.round((currentRaw.aReceber / currentRaw.vendas) * 100)}% do total`,
+    custo: `R$ ${currentRaw.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    custoPct: `${Math.round((currentRaw.custo / currentRaw.vendas) * 100)}% das vendas`,
+    custoBarPct: Math.round((currentRaw.custo / currentRaw.vendas) * 100),
+    lucro: `R$ ${currentRaw.lucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    lucroPct: `${Math.round((currentRaw.lucro / currentRaw.vendas) * 100)}% das vendas`,
+    lucroBarPct: Math.round((currentRaw.lucro / currentRaw.vendas) * 100)
+  }
+
+  // Lista Dinâmica de Pedidos Recentes (sempre com foto circular e nome da cliente)
   const [orders, setOrders] = useState([
     {
       id: 1,
@@ -103,7 +125,7 @@ export function DashboardOverview({ onToast }) {
       status: 'Confirmado',
       statusType: 'success',
       date: '26/05',
-      address: 'Rua São José, Centro, Cuité de Mamanguape'
+      address: 'Rua São José, Centro, Cuite de Mamanguape'
     },
     {
       id: 2,
@@ -118,7 +140,7 @@ export function DashboardOverview({ onToast }) {
       status: 'Confirmado',
       statusType: 'success',
       date: '26/05',
-      address: 'Av. Brasil, 140, Cuité'
+      address: 'Av. Brasil, 140, Cuite'
     },
     {
       id: 3,
@@ -133,7 +155,7 @@ export function DashboardOverview({ onToast }) {
       status: 'Pagamento pendente',
       statusType: 'pending',
       date: '25/05',
-      address: 'Bairro Novo, Cuité de Mamanguape'
+      address: 'Bairro Novo, Cuite de Mamanguape'
     },
     {
       id: 4,
@@ -163,48 +185,48 @@ export function DashboardOverview({ onToast }) {
       status: 'Pago',
       statusType: 'success',
       date: '24/05',
-      address: 'Rua Bela Vista, Cuité'
+      address: 'Rua Bela Vista, Cuite'
     }
   ])
 
-  // Lista de Solicitações para o Modal
+  // Lista de Solicitações para o Modal (com foto de cada cliente)
   const [solicitacoesList, setSolicitacoesList] = useState([
-    { id: 101, name: 'Juliana Alves', phone: '(83) 98877-6655', product: 'Sandália Rasteira Trançada Dourada (Tam 37)', value: 'R$ 89,90' },
-    { id: 102, name: 'Renata Castro', phone: '(83) 99611-2233', product: 'Bolsa Tiracolo Matelassê Preta', value: 'R$ 129,90' },
-    { id: 103, name: 'Camila Duarte', phone: '(83) 99344-5566', product: 'Salto Bloco Nude Rosé (Tam 36)', value: 'R$ 139,90' },
-    { id: 104, name: 'Letícia Barbosa', phone: '(83) 99811-7788', product: 'Vestido Midi Canelado Terracota (Tam M)', value: 'R$ 149,90' },
-    { id: 105, name: 'Priscila Mendes', phone: '(83) 98722-3344', product: 'Rasteira Pérola Off-White (Tam 38)', value: 'R$ 79,90' },
-    { id: 106, name: 'Sabrina Ferreira', phone: '(83) 99188-4455', product: 'Bolsa Baguete Caramelo', value: 'R$ 119,90' },
-    { id: 107, name: 'Tatiana Ribeiro', phone: '(83) 98833-2211', product: 'Mule Bico Fino Metalizada (Tam 37)', value: 'R$ 109,90' },
-    { id: 108, name: 'Valéria Monteiro', phone: '(83) 99677-8899', product: 'Conjunto Colar + Argola Banhada', value: 'R$ 69,90' },
+    { id: 101, name: 'Juliana Alves', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80', phone: '(83) 98877-6655', product: 'Sandália Rasteira Trançada Dourada (Tam 37)', value: 'R$ 89,90' },
+    { id: 102, name: 'Renata Castro', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80', phone: '(83) 99611-2233', product: 'Bolsa Tiracolo Matelassê Preta', value: 'R$ 129,90' },
+    { id: 103, name: 'Camila Duarte', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80', phone: '(83) 99344-5566', product: 'Salto Bloco Nude Rosé (Tam 36)', value: 'R$ 139,90' },
+    { id: 104, name: 'Letícia Barbosa', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80', phone: '(83) 99811-7788', product: 'Vestido Midi Canelado Terracota (Tam M)', value: 'R$ 149,90' },
+    { id: 105, name: 'Priscila Mendes', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80', phone: '(83) 98722-3344', product: 'Rasteira Pérola Off-White (Tam 38)', value: 'R$ 79,90' },
+    { id: 106, name: 'Sabrina Ferreira', photo: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=120&q=80', phone: '(83) 99188-4455', product: 'Bolsa Baguete Caramelo', value: 'R$ 119,90' },
+    { id: 107, name: 'Tatiana Ribeiro', photo: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=120&q=80', phone: '(83) 98833-2211', product: 'Mule Bico Fino Metalizada (Tam 37)', value: 'R$ 109,90' },
+    { id: 108, name: 'Valéria Monteiro', photo: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=120&q=80', phone: '(83) 99677-8899', product: 'Conjunto Colar + Argola Banhada', value: 'R$ 69,90' },
   ])
 
   // Itens para Compra na Viagem
   const [shoppingItems, setShoppingItems] = useState([
-    { id: 1, supplier: 'JP Calçados (Box 14)', product: 'Rasteira Trançada Dourada', size: '37', qty: 3, client: 'Juliana Costa', cost: 48, bought: false },
-    { id: 2, supplier: 'JP Calçados (Box 14)', product: 'Salto Bloco Tiras Finas Nude', size: '36', qty: 2, client: 'Ana Beatriz', cost: 72, bought: false },
-    { id: 3, supplier: 'Bella Atacado (Rua Maciel Pinheiro)', product: 'Bolsa Tiracolo Matelassê', size: 'Único', qty: 2, client: 'Mariana Silva', cost: 68, bought: false },
-    { id: 4, supplier: 'Bella Atacado (Rua Maciel Pinheiro)', product: 'Bolsa Baguete Caramelo', size: 'Único', qty: 1, client: 'Sabrina F.', cost: 60, bought: false },
-    { id: 5, supplier: 'Moda Center JP', product: 'Vestido Midi Canelado', size: 'M', qty: 2, client: 'Carla Souza', cost: 75, bought: false },
-    { id: 6, supplier: 'Mix Importados', product: 'Brincos Festa Dourados', size: 'Único', qty: 4, client: 'Carla Souza', cost: 22, bought: false }
+    { id: 1, supplier: 'JP Calçados (Box 14)', product: 'Rasteira Trançada Dourada', size: '37', qty: 3, client: 'Juliana Costa', clientPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80', cost: 48, bought: false },
+    { id: 2, supplier: 'JP Calçados (Box 14)', product: 'Salto Bloco Tiras Finas Nude', size: '36', qty: 2, client: 'Ana Beatriz', clientPhoto: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80', cost: 72, bought: false },
+    { id: 3, supplier: 'Bella Atacado (Rua Maciel Pinheiro)', product: 'Bolsa Tiracolo Matelassê', size: 'Único', qty: 2, client: 'Mariana Silva', clientPhoto: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80', cost: 68, bought: false },
+    { id: 4, supplier: 'Bella Atacado (Rua Maciel Pinheiro)', product: 'Bolsa Baguete Caramelo', size: 'Único', qty: 1, client: 'Sabrina F.', clientPhoto: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=120&q=80', cost: 60, bought: false },
+    { id: 5, supplier: 'Moda Center JP', product: 'Vestido Midi Canelado', size: 'M', qty: 2, client: 'Carla Souza', clientPhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80', cost: 75, bought: false },
+    { id: 6, supplier: 'Mix Importados', product: 'Brincos Festa Dourados', size: 'Único', qty: 4, client: 'Carla Souza', clientPhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80', cost: 22, bought: false }
   ])
 
-  // Clientes com Fiado Pendente
+  // Clientes com Fiado Pendente (com fotos)
   const [debtorsList, setDebtorsList] = useState([
-    { id: 1, name: 'Ana Beatriz', phone: '(83) 99122-8877', order: '#MI-1042', due: 'R$ 410,00', date: '25/05' },
-    { id: 2, name: 'Carla Souza', phone: '(83) 98711-4455', order: '#MI-1040', due: 'R$ 730,00', date: '25/05' },
-    { id: 3, name: 'Patrícia Gomes', phone: '(83) 99311-5522', order: '#MI-1035', due: 'R$ 520,00', date: '22/05' },
-    { id: 4, name: 'Camila Rocha', phone: '(83) 99877-3311', order: '#MI-1033', due: 'R$ 380,00', date: '20/05' },
-    { id: 5, name: 'Vanessa Lima', phone: '(83) 98744-9988', order: '#MI-1030', due: 'R$ 890,00', date: '18/05' },
-    { id: 6, name: 'Roberta Dias', phone: '(83) 99655-1100', order: '#MI-1028', due: 'R$ 1.500,00', date: '15/05' },
+    { id: 1, name: 'Ana Beatriz', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80', phone: '(83) 99122-8877', order: '#MI-1042', due: 'R$ 410,00', numericDue: 410, date: '25/05' },
+    { id: 2, name: 'Carla Souza', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80', phone: '(83) 98711-4455', order: '#MI-1040', due: 'R$ 730,00', numericDue: 730, date: '25/05' },
+    { id: 3, name: 'Patrícia Gomes', photo: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=120&q=80', phone: '(83) 99311-5522', order: '#MI-1035', due: 'R$ 520,00', numericDue: 520, date: '22/05' },
+    { id: 4, name: 'Camila Rocha', photo: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=120&q=80', phone: '(83) 99877-3311', order: '#MI-1033', due: 'R$ 380,00', numericDue: 380, date: '20/05' },
+    { id: 5, name: 'Vanessa Lima', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80', phone: '(83) 98744-9988', order: '#MI-1030', due: 'R$ 890,00', numericDue: 890, date: '18/05' },
+    { id: 6, name: 'Roberta Dias', photo: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=120&q=80', phone: '(83) 99655-1100', order: '#MI-1028', due: 'R$ 1.500,00', numericDue: 1500, date: '15/05' },
   ])
 
-  // Pedidos Prontos para Entrega
+  // Pedidos Prontos para Entrega (com fotos)
   const [readyDeliveries, setReadyDeliveries] = useState([
-    { id: 1, name: 'Mariana Silva', phone: '(83) 99655-3344', order: '#MI-1045', type: 'Entrega em Domicílio', address: 'Av. Brasil, 140' },
-    { id: 2, name: 'Juliana Costa', phone: '(83) 98877-1122', order: '#MI-1048', type: 'Retirada na Loja', address: 'Loja M_I Store' },
-    { id: 3, name: 'Letícia Lima', phone: '(83) 99123-4567', order: '#MI-1039', type: 'Entrega em Domicílio', address: 'Rua Nova, 54' },
-    { id: 4, name: 'Gisele Santos', phone: '(83) 99888-2211', order: '#MI-1037', type: 'Retirada na Loja', address: 'Loja M_I Store' },
+    { id: 1, name: 'Mariana Silva', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80', phone: '(83) 99655-3344', order: '#MI-1045', type: 'Entrega em Domicílio', address: 'Av. Brasil, 140' },
+    { id: 2, name: 'Juliana Costa', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80', phone: '(83) 98877-1122', order: '#MI-1048', type: 'Retirada na Loja', address: 'Loja M_I Store' },
+    { id: 3, name: 'Letícia Lima', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80', phone: '(83) 99123-4567', order: '#MI-1039', type: 'Entrega em Domicílio', address: 'Rua Nova, 54' },
+    { id: 4, name: 'Gisele Santos', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80', phone: '(83) 99888-2211', order: '#MI-1037', type: 'Retirada na Loja', address: 'Loja M_I Store' },
   ])
 
   // Ações Funcionais em Tempo Real
@@ -221,7 +243,7 @@ export function DashboardOverview({ onToast }) {
         const nextState = !item.bought
         if (nextState) {
           setComprasCount(c => Math.max(0, c - 1))
-          if (onToast) onToast(`Item "${item.productName || item.product}" marcado como comprado!`)
+          if (onToast) onToast(`Item "${item.product}" marcado como comprado!`)
         } else {
           setComprasCount(c => c + 1)
         }
@@ -231,27 +253,64 @@ export function DashboardOverview({ onToast }) {
     }))
   }
 
-  const handlePayOrder = (orderId, clientName) => {
+  const handlePayOrder = (orderId, clientName, amount = 0) => {
     setOrders(prev => prev.map(ord => {
-      if (ord.id === orderId) {
+      if (ord.id === orderId || ord.name === clientName) {
         return { ...ord, status: 'Pago', statusType: 'success' }
       }
       return ord
     }))
     setPendentesCount(c => Math.max(0, c - 1))
     setDebtorsList(prev => prev.filter(d => d.name !== clientName))
+    
+    // Atualizar métricas financeiras em tempo real
+    if (amount > 0) {
+      setFinancialData(prev => ({
+        ...prev,
+        [selectedPeriod]: {
+          ...prev[selectedPeriod],
+          recebido: prev[selectedPeriod].recebido + amount,
+          aReceber: Math.max(0, prev[selectedPeriod].aReceber - amount)
+        }
+      }))
+    }
+
     setActiveModal(null)
-    if (onToast) onToast(`Pagamento de ${clientName} registrado com sucesso! Saldo quitado.`)
+    if (onToast) onToast(`Pagamento de ${clientName} quitado com sucesso!`)
   }
 
   const handleDeliverOrder = (deliveryId, clientName) => {
     setReadyDeliveries(prev => prev.filter(d => d.id !== deliveryId))
     setProntosCount(c => Math.max(0, c - 1))
-    if (onToast) onToast(`Pedido de ${clientName} entregue com sucesso!`)
+    if (onToast) onToast(`Pedido de ${clientName} marcado como entregue!`)
+  }
+
+  // Render Skeleton Loading
+  if (isLoading) {
+    return (
+      <div className="dashboard-page" aria-busy="true" aria-label="Carregando resumo operacional">
+        <div className="dashboard-header" style={{ marginBottom: '16px' }}>
+          <div>
+            <div className="skeleton-box" style={{ width: '220px', height: '36px', marginBottom: '8px' }} />
+            <div className="skeleton-box" style={{ width: '360px', height: '18px' }} />
+          </div>
+          <div className="skeleton-box" style={{ width: '240px', height: '38px' }} />
+        </div>
+        <div className="operational-cards-grid" style={{ marginBottom: '20px' }}>
+          {[1, 2, 3, 4].map(n => (
+            <div key={n} className="skeleton-box" style={{ height: '90px' }} />
+          ))}
+        </div>
+        <div className="dashboard-grid-two-cols">
+          <div className="skeleton-box" style={{ height: '320px' }} />
+          <div className="skeleton-box" style={{ height: '320px' }} />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page" role="region" aria-label="Painel de Controle Início">
       {/* 6. Cabeçalho do Dashboard */}
       <div className="dashboard-header">
         <div>
@@ -261,30 +320,48 @@ export function DashboardOverview({ onToast }) {
           </p>
         </div>
 
-        {/* Card de Data Clicável (Abre Calendário de Viagens) */}
-        <div
-          className="date-badge"
-          onClick={() => setActiveModal('calendario')}
-          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-          title="Ver calendário de viagens"
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = '#731A30' }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)' }}
-        >
-          <Calendar size={16} color="#731A30" />
-          <span>Segunda-feira, 26 de Maio de 2025</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Botão sutil de Recarregar / Sincronizar */}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="btn-secondary"
+            style={{ padding: '7px 12px', fontSize: '0.75rem', height: '38px' }}
+            title="Atualizar dados do painel"
+            aria-label="Atualizar dados do painel operacional"
+          >
+            <RefreshCw size={14} />
+            <span>Atualizar</span>
+          </button>
+
+          {/* Card de Data Clicável (Abre Calendário de Viagens) */}
+          <button
+            type="button"
+            className="date-badge"
+            onClick={() => setActiveModal('calendario')}
+            title="Ver calendário de viagens para João Pessoa"
+            aria-label="Segunda-feira, 26 de Maio de 2025. Clique para ver calendário de viagens"
+          >
+            <Calendar size={16} color="#731A30" />
+            <span>Segunda-feira, 26 de Maio de 2025</span>
+          </button>
         </div>
       </div>
 
-      {/* 7. Primeira Linha — 4 Cards Operacionais Funcionais */}
-      <div className="operational-cards-grid">
+      {/* 7. Primeira Linha - 4 Cards Operacionais Funcionais */}
+      <div className="operational-cards-grid" role="list" aria-label="Cards Operacionais de Ação Rápida">
         {/* Card 1: Solicitações */}
         <div
+          role="listitem"
+          tabIndex={0}
           className="op-card"
           onClick={() => setActiveModal('solicitacoes')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveModal('solicitacoes'); } }}
           title="Ver solicitações aguardando confirmação"
+          aria-label={`${solicitacoesCount} solicitações aguardando confirmação. Clique para abrir`}
         >
           <div className="op-card-left">
-            <div className="op-card-icon-wrap">
+            <div className="op-card-icon-wrap" aria-hidden="true">
               <FileText size={20} strokeWidth={2.2} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
@@ -295,17 +372,21 @@ export function DashboardOverview({ onToast }) {
               </div>
             </div>
           </div>
-          <ChevronRight size={18} className="op-card-arrow" />
+          <ChevronRight size={18} className="op-card-arrow" aria-hidden="true" />
         </div>
 
         {/* Card 2: Itens para Comprar */}
         <div
+          role="listitem"
+          tabIndex={0}
           className="op-card"
           onClick={() => setActiveModal('compras')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveModal('compras'); } }}
           title="Ver checklist de compras para João Pessoa"
+          aria-label={`${comprasCount} itens para comprar na próxima viagem. Clique para abrir`}
         >
           <div className="op-card-left">
-            <div className="op-card-icon-wrap">
+            <div className="op-card-icon-wrap" aria-hidden="true">
               <ShoppingCart size={20} strokeWidth={2.2} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
@@ -316,17 +397,21 @@ export function DashboardOverview({ onToast }) {
               </div>
             </div>
           </div>
-          <ChevronRight size={18} className="op-card-arrow" />
+          <ChevronRight size={18} className="op-card-arrow" aria-hidden="true" />
         </div>
 
         {/* Card 3: Pedidos Prontos */}
         <div
+          role="listitem"
+          tabIndex={0}
           className="op-card"
           onClick={() => setActiveModal('prontos')}
-          title="Ver entregas e retiradas pendentes"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveModal('prontos'); } }}
+          title="Ver entregas e retiradas prontas"
+          aria-label={`${prontosCount} pedidos prontos para entrega. Clique para abrir`}
         >
           <div className="op-card-left">
-            <div className="op-card-icon-wrap">
+            <div className="op-card-icon-wrap" aria-hidden="true">
               <Truck size={20} strokeWidth={2.2} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
@@ -337,17 +422,21 @@ export function DashboardOverview({ onToast }) {
               </div>
             </div>
           </div>
-          <ChevronRight size={18} className="op-card-arrow" />
+          <ChevronRight size={18} className="op-card-arrow" aria-hidden="true" />
         </div>
 
         {/* Card 4: Clientes Pendentes */}
         <div
+          role="listitem"
+          tabIndex={0}
           className="op-card"
           onClick={() => setActiveModal('pendentes')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveModal('pendentes'); } }}
           title="Ver clientes com saldo ou fiado a receber"
+          aria-label={`${pendentesCount} clientes com pagamento pendente. Clique para abrir`}
         >
           <div className="op-card-left">
-            <div className="op-card-icon-wrap">
+            <div className="op-card-icon-wrap" aria-hidden="true">
               <Users size={20} strokeWidth={2.2} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
@@ -358,22 +447,22 @@ export function DashboardOverview({ onToast }) {
               </div>
             </div>
           </div>
-          <ChevronRight size={18} className="op-card-arrow" />
+          <ChevronRight size={18} className="op-card-arrow" aria-hidden="true" />
         </div>
       </div>
 
       {/* Segunda Linha: Compra da Semana + Financeiro */}
       <div className="dashboard-grid-two-cols">
-        {/* 8. Bloco — Compra da Semana */}
+        {/* 8. Bloco - Compra da Semana */}
         <div className="dash-card">
           <div>
             <div className="dash-card-header">
               <div className="dash-card-header-left">
-                <div className="dash-card-icon-pill">
+                <div className="dash-card-icon-pill" aria-hidden="true">
                   <ShoppingBag size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <h3 className="dash-card-title">Compra da Semana</h3>
+                  <h2 className="dash-card-title" style={{ fontSize: '1.05rem', margin: 0 }}>Compra da Semana</h2>
                   <p className="dash-card-subtitle">Próxima viagem para João Pessoa</p>
                 </div>
               </div>
@@ -382,6 +471,7 @@ export function DashboardOverview({ onToast }) {
                 type="button"
                 className="dash-card-link"
                 onClick={() => setActiveModal('compra_detalhes')}
+                aria-label="Ver detalhes da viagem para João Pessoa"
               >
                 <span>Ver detalhes</span>
                 <ArrowRight size={14} />
@@ -393,11 +483,15 @@ export function DashboardOverview({ onToast }) {
               className="trip-banner"
               onClick={() => setActiveModal('compra_detalhes')}
               style={{ cursor: 'pointer' }}
-              title="Clique para ver o roteiro em João Pessoa"
+              title="Clique para ver o roteiro de fornecedores em João Pessoa"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('compra_detalhes'); }}
+              role="button"
+              aria-label="Banner da viagem de 30 de Maio de 2025 para João Pessoa. Em 4 dias"
             >
               <img
                 src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80"
-                alt="João Pessoa"
+                alt="Praia de Tambaú, João Pessoa"
                 className="trip-banner-img"
               />
               <div className="trip-banner-info">
@@ -413,27 +507,27 @@ export function DashboardOverview({ onToast }) {
             {/* Resumo da Compra (3 Indicadores com Divisores Verticais) */}
             <div className="trip-stats-row">
               <div className="trip-stat-col">
-                <FileText size={18} className="trip-stat-icon" />
+                <FileText size={18} className="trip-stat-icon" aria-hidden="true" />
                 <div>
                   <div className="trip-stat-label">Total de itens</div>
                   <div className="trip-stat-value">{comprasCount}</div>
                 </div>
               </div>
 
-              <div className="trip-stat-divider" />
+              <div className="trip-stat-divider" aria-hidden="true" />
 
               <div className="trip-stat-col">
-                <Share2 size={18} className="trip-stat-icon" />
+                <Share2 size={18} className="trip-stat-icon" aria-hidden="true" />
                 <div>
                   <div className="trip-stat-label">Fornecedores</div>
                   <div className="trip-stat-value">8</div>
                 </div>
               </div>
 
-              <div className="trip-stat-divider" />
+              <div className="trip-stat-divider" aria-hidden="true" />
 
               <div className="trip-stat-col">
-                <DollarSign size={18} className="trip-stat-icon" />
+                <DollarSign size={18} className="trip-stat-icon" aria-hidden="true" />
                 <div>
                   <div className="trip-stat-label">Custo estimado</div>
                   <div className="trip-stat-value">R$ 6.800,00</div>
@@ -445,7 +539,7 @@ export function DashboardOverview({ onToast }) {
           {/* Resultado da Viagem */}
           <div className="trip-bottom-row">
             <div className="trip-bottom-item">
-              <Tag size={16} color="#731A30" />
+              <Tag size={16} color="#731A30" aria-hidden="true" />
               <div>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Valor de venda total</span>
                 <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>R$ 14.400,00</div>
@@ -454,7 +548,7 @@ export function DashboardOverview({ onToast }) {
 
             <div className="trip-bottom-item" style={{ alignItems: 'flex-end', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <TrendingUp size={16} color="#731A30" />
+                <TrendingUp size={16} color="#731A30" aria-hidden="true" />
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Lucro projetado</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -465,16 +559,16 @@ export function DashboardOverview({ onToast }) {
           </div>
         </div>
 
-        {/* 9. Bloco — Financeiro Funcional com Troca de Período */}
+        {/* 9. Bloco - Financeiro Funcional com Troca de Período */}
         <div className="dash-card">
           <div>
             <div className="dash-card-header">
               <div className="dash-card-header-left">
-                <div className="dash-card-icon-pill">
+                <div className="dash-card-icon-pill" aria-hidden="true">
                   <BarChart2 size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <h3 className="dash-card-title">Financeiro</h3>
+                  <h2 className="dash-card-title" style={{ fontSize: '1.05rem', margin: 0 }}>Financeiro</h2>
                   <p className="dash-card-subtitle">Resumo das vendas e valores</p>
                 </div>
               </div>
@@ -485,17 +579,22 @@ export function DashboardOverview({ onToast }) {
                   type="button"
                   className="period-dropdown"
                   onClick={() => setIsPeriodOpen(!isPeriodOpen)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isPeriodOpen}
+                  aria-label={`Período financeiro: ${selectedPeriod}. Clique para alterar`}
                 >
                   <span>{selectedPeriod}</span>
                   <ChevronDown size={14} color="#8C827A" />
                 </button>
 
                 {isPeriodOpen && (
-                  <div className="dropdown-menu-floating" style={{ width: '180px' }}>
-                    {Object.keys(financialPeriods).map((periodKey) => (
+                  <div className="dropdown-menu-floating" style={{ width: '180px' }} role="listbox">
+                    {Object.keys(financialData).map((periodKey) => (
                       <button
                         key={periodKey}
                         type="button"
+                        role="option"
+                        aria-selected={selectedPeriod === periodKey}
                         style={{
                           width: '100%',
                           textAlign: 'left',
@@ -509,7 +608,7 @@ export function DashboardOverview({ onToast }) {
                         onClick={() => {
                           setSelectedPeriod(periodKey)
                           setIsPeriodOpen(false)
-                          if (onToast) onToast(`Dados atualizados para: ${periodKey}`)
+                          if (onToast) onToast(`Dados financeiros atualizados: ${periodKey}`)
                         }}
                       >
                         {periodKey}
@@ -520,7 +619,7 @@ export function DashboardOverview({ onToast }) {
               </div>
             </div>
 
-            {/* Linha 1: 3 Colunas com Divisores Verticais */}
+            {/* Linha 1: 3 Colunas de Métricas */}
             <div className="fin-metrics-row-1">
               <div className="fin-metric-col">
                 <span className="fin-metric-label">Vendas confirmadas</span>
@@ -528,7 +627,7 @@ export function DashboardOverview({ onToast }) {
                 <div className="fin-metric-sub">{currentFin.pedidos}</div>
               </div>
 
-              <div className="trip-stat-divider" />
+              <div className="trip-stat-divider" aria-hidden="true" />
 
               <div className="fin-metric-col">
                 <span className="fin-metric-label">Recebido</span>
@@ -538,7 +637,7 @@ export function DashboardOverview({ onToast }) {
                 </div>
               </div>
 
-              <div className="trip-stat-divider" />
+              <div className="trip-stat-divider" aria-hidden="true" />
 
               <div className="fin-metric-col">
                 <span className="fin-metric-label">A receber</span>
@@ -571,7 +670,7 @@ export function DashboardOverview({ onToast }) {
             </div>
 
             {/* Barra de Distribuição Horizontal Dinâmica */}
-            <div className="distribution-bar">
+            <div className="distribution-bar" role="progressbar" aria-valuenow={currentFin.lucroBarPct} aria-valuemin={0} aria-valuemax={100}>
               <div className="dist-bar-wine" style={{ width: `${currentFin.custoBarPct}%`, transition: 'width 0.4s ease' }} />
               <div className="dist-bar-pink" style={{ width: `${currentFin.lucroBarPct}%`, transition: 'width 0.4s ease' }} />
             </div>
@@ -579,11 +678,11 @@ export function DashboardOverview({ onToast }) {
             {/* Legenda Abaixo da Barra */}
             <div className="dist-legend-row">
               <div className="dist-legend-item">
-                <span className="legend-dot-wine" />
+                <span className="legend-dot-wine" aria-hidden="true" />
                 <span>{currentFin.custo} Custo dos produtos ({currentFin.custoBarPct}%)</span>
               </div>
               <div className="dist-legend-item">
-                <span className="legend-dot-pink" />
+                <span className="legend-dot-pink" aria-hidden="true" />
                 <span>{currentFin.lucro} Lucro previsto ({currentFin.lucroBarPct}%)</span>
               </div>
             </div>
@@ -593,15 +692,15 @@ export function DashboardOverview({ onToast }) {
 
       {/* Terceira Linha: Próximas Ações + Pedidos Recentes */}
       <div className="dashboard-grid-two-cols">
-        {/* 10. Bloco — Próximas Ações Interativas */}
+        {/* 10. Bloco - Próximas Ações Interativas */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-header-left">
-              <div className="dash-card-icon-pill">
+              <div className="dash-card-icon-pill" aria-hidden="true">
                 <CheckCircle2 size={18} strokeWidth={2} />
               </div>
               <div>
-                <h3 className="dash-card-title">Próximas ações</h3>
+                <h2 className="dash-card-title" style={{ fontSize: '1.05rem', margin: 0 }}>Próximas ações</h2>
                 <p className="dash-card-subtitle">O que precisa da sua atenção hoje</p>
               </div>
             </div>
@@ -610,20 +709,24 @@ export function DashboardOverview({ onToast }) {
               type="button"
               className="dash-card-link"
               onClick={() => setActiveModal('solicitacoes')}
+              aria-label="Ver todas as próximas ações"
             >
               <span>Ver todas</span>
               <ArrowRight size={14} />
             </button>
           </div>
 
-          <div className="action-lines-list">
+          <div className="action-lines-list" role="list">
             {/* Ação 1 */}
             <div
+              role="listitem"
+              tabIndex={0}
               className="action-line-item"
               onClick={() => setActiveModal('solicitacoes')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('solicitacoes'); }}
             >
               <div className="action-line-left">
-                <div className="action-icon-wrap">
+                <div className="action-icon-wrap" aria-hidden="true">
                   <FileText size={17} strokeWidth={2.2} />
                 </div>
                 <div>
@@ -639,11 +742,14 @@ export function DashboardOverview({ onToast }) {
 
             {/* Ação 2 */}
             <div
+              role="listitem"
+              tabIndex={0}
               className="action-line-item"
               onClick={() => setActiveModal('compras')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('compras'); }}
             >
               <div className="action-line-left">
-                <div className="action-icon-wrap">
+                <div className="action-icon-wrap" aria-hidden="true">
                   <ShoppingCart size={17} strokeWidth={2.2} />
                 </div>
                 <div>
@@ -659,11 +765,14 @@ export function DashboardOverview({ onToast }) {
 
             {/* Ação 3 */}
             <div
+              role="listitem"
+              tabIndex={0}
               className="action-line-item"
               onClick={() => setActiveModal('prontos')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('prontos'); }}
             >
               <div className="action-line-left">
-                <div className="action-icon-wrap">
+                <div className="action-icon-wrap" aria-hidden="true">
                   <Truck size={17} strokeWidth={2.2} />
                 </div>
                 <div>
@@ -679,11 +788,14 @@ export function DashboardOverview({ onToast }) {
 
             {/* Ação 4 */}
             <div
+              role="listitem"
+              tabIndex={0}
               className="action-line-item"
               onClick={() => setActiveModal('pendentes')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('pendentes'); }}
             >
               <div className="action-line-left">
-                <div className="action-icon-wrap">
+                <div className="action-icon-wrap" aria-hidden="true">
                   <CreditCard size={17} strokeWidth={2.2} />
                 </div>
                 <div>
@@ -699,15 +811,15 @@ export function DashboardOverview({ onToast }) {
           </div>
         </div>
 
-        {/* 11. Bloco — Pedidos Recentes Interativo */}
+        {/* 11. Bloco - Pedidos Recentes Interativo */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-header-left">
-              <div className="dash-card-icon-pill">
+              <div className="dash-card-icon-pill" aria-hidden="true">
                 <ShoppingBag size={18} strokeWidth={2} />
               </div>
               <div>
-                <h3 className="dash-card-title">Pedidos recentes</h3>
+                <h2 className="dash-card-title" style={{ fontSize: '1.05rem', margin: 0 }}>Pedidos recentes</h2>
                 <p className="dash-card-subtitle">Últimos pedidos confirmados</p>
               </div>
             </div>
@@ -716,33 +828,41 @@ export function DashboardOverview({ onToast }) {
               type="button"
               className="dash-card-link"
               onClick={() => {
-                if (onToast) onToast('Visualizando todos os 5 pedidos recentes cadastrados.')
+                if (onToast) onToast(`Visualizando todos os ${orders.length} pedidos recentes cadastrados.`)
               }}
+              aria-label="Ver todos os pedidos recentes"
             >
               <span>Ver todos</span>
               <ArrowRight size={14} />
             </button>
           </div>
 
-          {/* Tabela de Pedidos Recentes com Clique p/ Detalhes */}
+          {/* Tabela Desktop de Pedidos Recentes */}
           <div className="recent-orders-table-wrap">
-            <table className="recent-orders-table">
+            <table className="recent-orders-table" aria-label="Tabela de Pedidos Recentes">
               <thead>
                 <tr>
-                  <th>Cliente</th>
-                  <th style={{ textAlign: 'center' }}>Itens</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Data</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col" style={{ textAlign: 'center' }}>Itens</th>
+                  <th scope="col">Valor</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" style={{ textAlign: 'right' }}>Data</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((order) => (
                   <tr
                     key={order.id}
+                    tabIndex={0}
                     onClick={() => {
                       setSelectedOrderForModal(order)
                       setActiveModal('pedido_detalhe')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setSelectedOrderForModal(order)
+                        setActiveModal('pedido_detalhe')
+                      }
                     }}
                     style={{ cursor: 'pointer', transition: 'background-color 0.15s ease' }}
                     onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#FDF5F5' }}
@@ -786,6 +906,47 @@ export function DashboardOverview({ onToast }) {
               </tbody>
             </table>
           </div>
+
+          {/* Cards Mobile de Pedidos Recentes (evita overflow horizontal em 390px) */}
+          <div className="mobile-order-cards" role="list" aria-label="Lista móvel de pedidos recentes">
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                role="listitem"
+                tabIndex={0}
+                className="mobile-order-card"
+                onClick={() => {
+                  setSelectedOrderForModal(order)
+                  setActiveModal('pedido_detalhe')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setSelectedOrderForModal(order)
+                    setActiveModal('pedido_detalhe')
+                  }
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="client-cell">
+                    <img src={order.photo} alt={order.name} className="client-avatar" />
+                    <div>
+                      <div className="client-name">{order.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{order.code} • {order.date}</div>
+                    </div>
+                  </div>
+                  {order.statusType === 'success' ? (
+                    <span className="badge-pill-green">{order.status}</span>
+                  ) : (
+                    <span className="badge-pill-pink" style={{ marginTop: 0 }}>{order.status}</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #F6F1EC' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{order.itemsCount} item(ns)</span>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{order.value}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -802,12 +963,18 @@ export function DashboardOverview({ onToast }) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <p style={{ fontSize: '0.8125rem', color: '#7A7067', margin: 0 }}>
-            Clientes que escolheram modelos no catálogo online. Ao confirmar, o item é enviado automaticamente para a lista da próxima viagem!
+            Clientes que escolheram modelos no catálogo online. Ao confirmar, o item entra automaticamente na lista da próxima viagem!
           </p>
 
           {solicitacoesList.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px', color: '#1D7A47', fontWeight: 600 }}>
-              ✓ Todas as solicitações foram confirmadas!
+            <div className="empty-state-box">
+              <div className="empty-state-icon">
+                <CheckCircle2 size={24} />
+              </div>
+              <div className="empty-state-title">Tudo em dia!</div>
+              <div className="empty-state-desc">
+                Todas as solicitações de clientes foram confirmadas e direcionadas para as compras.
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
@@ -822,22 +989,30 @@ export function DashboardOverview({ onToast }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '12px'
+                    gap: '12px',
+                    flexWrap: 'wrap'
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#2A2426' }}>
-                      {sol.name} <span style={{ fontSize: '0.75rem', color: '#7A7067', fontWeight: 400 }}>• {sol.phone}</span>
-                    </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#731A30', fontWeight: 600, marginTop: '2px' }}>
-                      {sol.product}
-                    </div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2A2426', marginTop: '2px' }}>
-                      {sol.value}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                      src={sol.photo}
+                      alt={sol.name}
+                      style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #ECE5DE' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#2A2426' }}>
+                        {sol.name} <span style={{ fontSize: '0.75rem', color: '#7A7067', fontWeight: 400 }}>• {sol.phone}</span>
+                      </div>
+                      <div style={{ fontSize: '0.8125rem', color: '#731A30', fontWeight: 600, marginTop: '2px' }}>
+                        {sol.product}
+                      </div>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2A2426', marginTop: '2px' }}>
+                        {sol.value}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
                     <a
                       href={`https://wa.me/55${sol.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${sol.name}! Aqui é Edvania da M_I Store referente ao seu pedido.`)}`}
                       target="_blank"
@@ -851,6 +1026,7 @@ export function DashboardOverview({ onToast }) {
                       type="button"
                       className="btn-primary"
                       onClick={() => handleConfirmSolicitacao(sol.id, sol.name)}
+                      title="Confirmar este pedido e enviar para a Compra da Semana"
                     >
                       <Check size={14} /> Confirmar
                     </button>
@@ -866,46 +1042,46 @@ export function DashboardOverview({ onToast }) {
       <Modal
         isOpen={activeModal === 'compras'}
         onClose={() => setActiveModal(null)}
-        title={`Checklist de Compras em João Pessoa (${shoppingItems.filter(i => !i.bought).length} pendentes)`}
+        title={`Lista de Compras em João Pessoa (${comprasCount} itens)`}
         maxWidth="680px"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{
             background: '#FDF5F5',
-            border: '1px solid #F7E4E6',
-            borderRadius: '10px',
-            padding: '12px 14px',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            border: '1px solid #FAD1D6',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
             <div>
-              <span style={{ fontSize: '0.72rem', color: '#7A7067' }}>Próxima Viagem Programada:</span>
-              <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: '#731A30' }}>
-                Quinta-feira, 30 de Maio de 2025
-              </div>
+              <span style={{ fontSize: '0.75rem', color: '#7A7067' }}>Próxima Viagem</span>
+              <div style={{ fontWeight: 800, color: '#731A30' }}>Quinta-feira, 30 de Maio de 2025</div>
             </div>
-            <span className="badge-pill-pink">Em 4 dias</span>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#7A7067' }}>Custo Previsto</span>
+              <div style={{ fontWeight: 800, color: '#2A2426' }}>R$ 6.800,00</div>
+            </div>
           </div>
 
-          <p style={{ fontSize: '0.8125rem', color: '#7A7067', margin: 0 }}>
-            Marque cada peça conforme for comprando nos boxes e atacados parceiros em JP:
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {shoppingItems.map((item) => (
               <div
                 key={item.id}
                 style={{
                   padding: '10px 14px',
-                  borderRadius: '10px',
-                  border: item.bought ? '1px solid #C8EBD4' : '1px solid #ECE5DE',
-                  background: item.bought ? '#F2FAF4' : '#FFFFFF',
+                  borderRadius: '8px',
+                  border: '1px solid #ECE5DE',
+                  background: item.bought ? '#F5FDF7' : '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '12px',
-                  transition: 'background 0.15s ease'
+                  opacity: item.bought ? 0.75 : 1,
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -913,29 +1089,32 @@ export function DashboardOverview({ onToast }) {
                     type="checkbox"
                     checked={item.bought}
                     onChange={() => handleToggleBoughtItem(item.id)}
-                    style={{ width: '18px', height: '18px', accentColor: '#731A30', cursor: 'pointer' }}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#731A30' }}
                   />
+                  {item.clientPhoto && (
+                    <img
+                      src={item.clientPhoto}
+                      alt={item.client}
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  )}
                   <div>
-                    <div style={{
-                      fontWeight: 700,
-                      fontSize: '0.84rem',
-                      color: item.bought ? '#8C827A' : '#2A2426',
-                      textDecoration: item.bought ? 'line-through' : 'none'
-                    }}>
-                      {item.product}
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: item.bought ? '#1D7A47' : '#2A2426', textDecoration: item.bought ? 'line-through' : 'none' }}>
+                      {item.product} (Tam {item.size}) • {item.qty} un
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#7A7067' }}>
-                      Tam: {item.size} • Qtd: {item.qty} • Cliente: <strong>{item.client}</strong>
+                      <strong>Fornecedor:</strong> {item.supplier} | <strong>Cliente:</strong> {item.client}
                     </div>
-                    <span style={{ fontSize: '0.6875rem', color: '#731A30', fontWeight: 600 }}>
-                      {item.supplier}
-                    </span>
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#7A7067' }}>Custo Est.</div>
-                  <strong style={{ fontSize: '0.875rem', color: '#2A2426' }}>R$ {item.cost.toFixed(2)}</strong>
+                  <div style={{ fontWeight: 800, color: '#731A30', fontSize: '0.875rem' }}>
+                    R$ {(item.cost * item.qty).toFixed(2).replace('.', ',')}
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: item.bought ? '#1D7A47' : '#8C827A' }}>
+                    {item.bought ? '✓ Comprado' : 'A comprar'}
+                  </span>
                 </div>
               </div>
             ))}
@@ -952,186 +1131,206 @@ export function DashboardOverview({ onToast }) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <p style={{ fontSize: '0.8125rem', color: '#7A7067', margin: 0 }}>
-            Mercadorias já trazidas da viagem aguardando rota ou retirada no local pelas clientes:
+            Pacotes separados na loja aguardando entrega em domicílio ou retirada pelas clientes:
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {readyDeliveries.map((del) => (
-              <div
-                key={del.id}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid #ECE5DE',
-                  background: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.875rem', color: '#2A2426' }}>
-                    {del.name} <span style={{ color: '#731A30' }}>({del.order})</span>
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#7A7067', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MapPin size={13} color="#731A30" />
-                    <span>{del.address}</span>
-                  </div>
-                  <span style={{
-                    fontSize: '0.6875rem',
-                    fontWeight: 700,
-                    background: del.type === 'Entrega em Domicílio' ? '#FDF5F5' : '#F2FAF4',
-                    color: del.type === 'Entrega em Domicílio' ? '#731A30' : '#1D7A47',
-                    padding: '2px 8px',
-                    borderRadius: '999px',
-                    display: 'inline-block',
-                    marginTop: '4px'
-                  }}>
-                    {del.type}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <a
-                    href={`https://wa.me/55${del.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${del.name}! Seu pedido na M_I Store já está pronto!`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-whatsapp"
-                  >
-                    <MessageCircle size={14} /> WhatsApp
-                  </a>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => handleDeliverOrder(del.id, del.name)}
-                  >
-                    <Check size={14} /> Entregue
-                  </button>
-                </div>
+          {readyDeliveries.length === 0 ? (
+            <div className="empty-state-box">
+              <div className="empty-state-icon">
+                <Truck size={24} />
               </div>
-            ))}
-          </div>
+              <div className="empty-state-title">Todas as entregas concluídas!</div>
+              <div className="empty-state-desc">
+                Nenhum pacote pendente para entrega ou retirada no momento.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {readyDeliveries.map((del) => (
+                <div
+                  key={del.id}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #ECE5DE',
+                    background: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                      src={del.photo}
+                      alt={del.name}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#2A2426' }}>
+                        {del.name} <span style={{ fontSize: '0.75rem', color: '#731A30' }}>({del.order})</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#7A7067', marginTop: '2px' }}>
+                        <MapPin size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> {del.type} • {del.address}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                    <a
+                      href={`https://wa.me/55${del.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${del.name}! Aqui é Edvania da M_I Store. Seu pedido ${del.order} está pronto!`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-whatsapp"
+                      title="Avisar cliente pelo WhatsApp"
+                    >
+                      <MessageCircle size={14} /> WhatsApp
+                    </a>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => handleDeliverOrder(del.id, del.name)}
+                    >
+                      <Check size={14} /> Concluir
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
 
-      {/* MODAL 4: Clientes com Pagamento Pendente / Fiados (Card 4) */}
+      {/* MODAL 4: Clientes com Pagamento Pendente / Fiado (Card 4) */}
       <Modal
         isOpen={activeModal === 'pendentes'}
         onClose={() => setActiveModal(null)}
         title={`Clientes com Pagamento Pendente (${debtorsList.length})`}
         maxWidth="640px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <p style={{ fontSize: '0.8125rem', color: '#7A7067', margin: 0 }}>
-            Controle de saldo em aberto e fiado com link direto para lembrete educado no WhatsApp:
+            Clientes com saldo devedor ou compras fiadas em aberto. Você pode enviar lembrete amigável ou dar baixa no recebimento:
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {debtorsList.map((debtor) => (
-              <div
-                key={debtor.id}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid #F6E3E5',
-                  background: '#FDF9F9',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.875rem', color: '#2A2426' }}>
-                    {debtor.name} <span style={{ color: '#731A30', fontWeight: 600 }}>({debtor.order})</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#7A7067' }}>
-                    {debtor.phone} • Pedido em {debtor.date}
-                  </div>
-                  <div style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#C03C54', marginTop: '2px' }}>
-                    Saldo devedor: {debtor.due}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <a
-                    href={`https://wa.me/55${debtor.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${debtor.name}! Passando para lembrar do saldo de ${debtor.due} do seu pedido na M_I Store. Posso te enviar a chave Pix?`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-whatsapp"
-                  >
-                    <MessageCircle size={14} /> Cobrar WhatsApp
-                  </a>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => {
-                      setDebtorsList(prev => prev.filter(d => d.id !== debtor.id))
-                      setPendentesCount(c => Math.max(0, c - 1))
-                      if (onToast) onToast(`Pagamento de ${debtor.due} de ${debtor.name} recebido e quitado!`)
-                    }}
-                  >
-                    <Check size={14} /> Quitar
-                  </button>
-                </div>
+          {debtorsList.length === 0 ? (
+            <div className="empty-state-box">
+              <div className="empty-state-icon">
+                <CheckCircle2 size={24} />
               </div>
-            ))}
-          </div>
+              <div className="empty-state-title">Nenhum fiado pendente!</div>
+              <div className="empty-state-desc">
+                Todos os clientes estão com seus pagamentos 100% quitados no período.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {debtorsList.map((debtor) => (
+                <div
+                  key={debtor.id}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #ECE5DE',
+                    background: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                      src={debtor.photo}
+                      alt={debtor.name}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#2A2426' }}>
+                        {debtor.name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#7A7067' }}>
+                        Pedido {debtor.order} • Data: {debtor.date}/2025
+                      </div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#C03C54', marginTop: '2px' }}>
+                        Saldo devedor: {debtor.due}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                    <a
+                      href={`https://wa.me/55${debtor.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${debtor.name}! Aqui é Edvania da M_I Store. Passando com muito carinho para lembrar do seu saldo de ${debtor.due} referente ao pedido ${debtor.order}.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-whatsapp"
+                      title="Enviar lembrete amigável no WhatsApp"
+                    >
+                      <MessageCircle size={14} /> Cobrar
+                    </a>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => handlePayOrder(debtor.id, debtor.name, debtor.numericDue)}
+                      title="Dar baixa no pagamento e quitar saldo"
+                    >
+                      <Check size={14} /> Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
 
-      {/* MODAL 5: Detalhes da Compra da Semana (João Pessoa) */}
+      {/* MODAL 5: Detalhes da Compra da Semana em João Pessoa */}
       <Modal
         isOpen={activeModal === 'compra_detalhes'}
         onClose={() => setActiveModal(null)}
-        title="Planejamento da Viagem a João Pessoa (30/05/2025)"
-        maxWidth="680px"
+        title="Roteiro e Planejamento da Viagem a João Pessoa"
+        maxWidth="640px"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{
-            display: 'flex',
-            gap: '16px',
             background: '#FDF5F5',
-            padding: '16px',
-            borderRadius: '12px',
-            alignItems: 'center'
+            padding: '14px',
+            borderRadius: '8px',
+            border: '1px solid #FAD1D6',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
           }}>
-            <img
-              src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80"
-              alt="João Pessoa"
-              style={{ width: '130px', height: '80px', borderRadius: '10px', objectFit: 'cover' }}
-            />
+            <Calendar size={24} color="#731A30" />
             <div>
-              <span className="badge-pill-pink">Viagem Semanal Confirmada</span>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2A2426', marginTop: '4px' }}>
-                Atacados de João Pessoa, PB
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: '#7A7067', margin: '2px 0 0 0' }}>
-                Roteiro: Centro (Rua Maciel Pinheiro), Galeria Central e Moda Center.
-              </p>
+              <strong style={{ color: '#731A30', fontSize: '1rem' }}>Quinta-feira, 30 de Maio de 2025</strong>
+              <div style={{ fontSize: '0.8125rem', color: '#7A7067' }}>
+                Saída de Cuité de Mamanguape às 05:30 • Retorno previsto às 16:00
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-            <div style={{ padding: '12px', background: '#F8F5F2', borderRadius: '10px' }}>
-              <span style={{ fontSize: '0.72rem', color: '#7A7067' }}>Total a Comprar</span>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2A2426' }}>{comprasCount} peças</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            <div style={{ padding: '12px', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #ECE5DE' }}>
+              <span style={{ fontSize: '0.75rem', color: '#7A7067' }}>Total a Comprar</span>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#731A30' }}>{comprasCount} peças</div>
             </div>
-            <div style={{ padding: '12px', background: '#F8F5F2', borderRadius: '10px' }}>
-              <span style={{ fontSize: '0.72rem', color: '#7A7067' }}>Capital a Levar</span>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#731A30' }}>R$ 6.800,00</div>
+            <div style={{ padding: '12px', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #ECE5DE' }}>
+              <span style={{ fontSize: '0.75rem', color: '#7A7067' }}>Dinheiro Previsto</span>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2A2426' }}>R$ 6.800,00</div>
             </div>
-            <div style={{ padding: '12px', background: '#E7F6EC', borderRadius: '10px' }}>
-              <span style={{ fontSize: '0.72rem', color: '#1D7A47' }}>Lucro Projetado</span>
+            <div style={{ padding: '12px', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #ECE5DE' }}>
+              <span style={{ fontSize: '0.75rem', color: '#7A7067' }}>Lucro da Viagem</span>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1D7A47' }}>R$ 7.600,00</div>
             </div>
           </div>
 
           <div>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2A2426', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2A2426', marginBottom: '8px' }}>
               Principais Fornecedores a Visitar nesta Viagem:
-            </h4>
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8125rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#FDF9F7', borderRadius: '6px' }}>
                 <span><strong>JP Calçados (Box 14)</strong> • Galeria Central</span>
@@ -1175,7 +1374,7 @@ export function DashboardOverview({ onToast }) {
               />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2A2426' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2A2426', margin: 0 }}>
                     {selectedOrderForModal.name}
                   </h3>
                   {selectedOrderForModal.statusType === 'success' ? (
@@ -1244,7 +1443,7 @@ export function DashboardOverview({ onToast }) {
                   <button
                     type="button"
                     className="btn-primary"
-                    onClick={() => handlePayOrder(selectedOrderForModal.id, selectedOrderForModal.name)}
+                    onClick={() => handlePayOrder(selectedOrderForModal.id, selectedOrderForModal.name, selectedOrderForModal.numericValue)}
                   >
                     <Check size={15} /> Registrar Pagamento Pix
                   </button>

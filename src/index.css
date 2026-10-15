@@ -1361,3 +1361,229 @@ img {
 }
 
 
+
+
+/* ==========================================================================
+   MELHORIAS DE RESPONSIVIDADE E ACESSIBILIDADE - ABA INÍCIO
+   Garante 0% overflow em 390x844 e conformidade com referências
+   ========================================================================== */
+
+/* Foco visível acessível em todos os botões e links */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-wine-dark);
+  outline-offset: 2px;
+}
+
+/* Skeleton Loading para o Dashboard */
+.skeleton-box {
+  background: linear-gradient(90deg, #F3ECE8 25%, #FAFAF9 50%, #F3ECE8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Estado Vazio Elegante */
+.empty-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  text-align: center;
+  background-color: #FDFAF8;
+  border: 1px dashed var(--border-card);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  gap: 10px;
+}
+
+.empty-state-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #F8EBEB;
+  color: var(--color-wine-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.empty-state-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.empty-state-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+/* Cards de Pedidos Mobile (evita scroll forçado em telas estreitas) */
+.mobile-order-cards {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-order-card {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-order-card:hover {
+  background-color: var(--bg-subtle);
+  border-color: #D6CCC2;
+}
+
+/* Ajustes finos para Mobile (<= 640px) */
+@media (max-width: 640px) {
+  /* Evitar overflow horizontal na página inteira */
+  body, html, .app-container, .main-content {
+    overflow-x: hidden !important;
+    max-width: 100vw;
+  }
+
+  .dashboard-page {
+    padding: 0 12px 32px 12px;
+  }
+
+  .topbar {
+    padding: 12px;
+  }
+
+  .demo-notice {
+    margin: 0 12px 8px;
+    font-size: 0.72rem;
+  }
+
+  .greeting-title {
+    font-size: 1.55rem;
+  }
+
+  .date-badge {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.75rem;
+    padding: 7px 10px;
+  }
+
+  /* 4 Cards Operacionais no Mobile */
+  .operational-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .op-card {
+    padding: 14px 16px;
+  }
+
+  /* Compra da Semana no Mobile */
+  .trip-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .trip-banner-img {
+    width: 100%;
+    height: 110px;
+  }
+
+  .trip-stats-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .trip-stat-divider {
+    display: none;
+  }
+
+  .trip-stat-col {
+    justify-content: flex-start;
+  }
+
+  .trip-bottom-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Financeiro no Mobile (Adequação da Linha de Métricas para não estourar) */
+  .fin-metrics-row-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  .fin-metrics-row-1 .trip-stat-divider {
+    display: none;
+  }
+
+  .fin-metrics-row-2 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .fin-metrics-row-2 > div:last-child {
+    text-align: left !important;
+  }
+
+  .dist-legend-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.7rem;
+  }
+
+  /* Alternar de tabela rígida para cartões de pedido em telas estreitas */
+  .recent-orders-table-wrap {
+    display: none;
+  }
+
+  .mobile-order-cards {
+    display: flex;
+  }
+
+  /* Modais em tela cheia suave no mobile */
+  .modal-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-height: 92vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .modal-header {
+    padding: 14px 18px;
+  }
+
+  .modal-body {
+    padding: 16px 18px;
+  }
+}

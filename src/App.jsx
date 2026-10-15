@@ -2,20 +2,23 @@ import React, { useState } from 'react'
 import { Sidebar } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
 import { DashboardOverview } from './pages/dashboard/DashboardOverview'
-import { VendasPage } from './pages/admin/VendasPage'
-import { SolicitacoesPage } from './pages/admin/SolicitacoesPage'
-import { CompraSemanaPage } from './pages/admin/CompraSemanaPage'
-import { EntregasPage } from './pages/admin/EntregasPage'
-import { ProdutosPage } from './pages/admin/ProdutosPage'
-import { CategoriasPage } from './pages/admin/CategoriasPage'
-import { ClientesPage } from './pages/admin/ClientesPage'
-import { FornecedoresPage } from './pages/admin/FornecedoresPage'
-import { FinanceiroPage } from './pages/admin/FinanceiroPage'
-import { RelatoriosPage } from './pages/admin/RelatoriosPage'
-import { ConfiguracoesPage } from './pages/admin/ConfiguracoesPage'
 import { CatalogPage } from './pages/catalog/CatalogPage'
 import { useApp } from './context/AppContext'
-import { Sparkles, X, RotateCcw, Smartphone, Check } from 'lucide-react'
+import { Sparkles, X, RotateCcw, ArrowLeft, Clock, CheckCircle } from 'lucide-react'
+
+// Mapeamento dos nomes amigáveis das 10 abas
+const TAB_LABELS = {
+  inicio: 'Início',
+  pedidos: 'Pedidos',
+  'compra-semana': 'Compra da Semana',
+  entregas: 'Entregas',
+  produtos: 'Produtos',
+  clientes: 'Clientes',
+  fornecedores: 'Fornecedores',
+  financeiro: 'Financeiro',
+  relatorios: 'Relatórios',
+  configuracoes: 'Configurações'
+}
 
 export function App() {
   const { resetToDefaultData } = useApp()
@@ -33,6 +36,9 @@ export function App() {
   const handleNavigate = (tabId) => {
     setActiveTab(tabId)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (tabId !== 'inicio') {
+      showToast(`Aba "${TAB_LABELS[tabId] || tabId}" programada para a próxima etapa.`)
+    }
   }
 
   const handleSearchSelectOrder = (name) => {
@@ -53,7 +59,7 @@ export function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar Fixa à Esquerda */}
+      {/* Sidebar Fixa à Esquerda (10 Abas Canônicas) */}
       <Sidebar
         activeItem={activeTab}
         onNavigate={handleNavigate}
@@ -73,9 +79,9 @@ export function App() {
         {/* Faixa de Aviso da Demonstração com Botão de Reset */}
         <aside className="demo-notice" aria-label="Aviso sobre os dados do protótipo">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <strong className="demo-notice-label">Demonstração M_I Store</strong>
+            <strong className="demo-notice-label">M_I Store Gestão</strong>
             <span>
-              Protótipo de alta fidelidade interativo. Navegue pelas 12 abas para conhecer todo o sistema.
+              Desenvolvimento rigoroso por etapas: <strong>Aba Início 100% concluída e operacional</strong>.
             </span>
           </div>
           <button
@@ -97,58 +103,64 @@ export function App() {
             title="Reiniciar os dados do protótipo para o estado inicial"
           >
             <RotateCcw size={12} />
-            <span>Restaurar Dados</span>
+            <span>Restaurar Demonstração</span>
           </button>
         </aside>
 
-        {/* Navegação Reativa das 12 Abas */}
+        {/* Conteúdo Principal: Aba 1 (Início) Ativa */}
         <main>
-          {activeTab === 'inicio' && (
+          {activeTab === 'inicio' ? (
             <DashboardOverview onToast={showToast} onNavigate={handleNavigate} />
-          )}
+          ) : (
+            <div className="page-container" style={{ paddingTop: '20px' }}>
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #ECE5DE',
+                padding: '40px 24px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                boxShadow: '0 2px 8px rgba(42,36,38,0.04)'
+              }}>
+                <div style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FDF5F5',
+                  color: '#731A30',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Clock size={28} />
+                </div>
 
-          {activeTab === 'vendas' && (
-            <VendasPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#FFF3DC', color: '#80530E', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px' }}>
+                    Etapa Seguinte no Fluxo
+                  </div>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#731A30', margin: '4px 0' }}>
+                    Aba {TAB_LABELS[activeTab] || activeTab}
+                  </h2>
+                  <p style={{ fontSize: '0.875rem', color: '#7A7067', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
+                    O sistema da M_I Store está sendo desenvolvido estritamente <strong>uma aba por vez</strong> com altíssima qualidade visual, funcionalidade real e responsividade completa. A aba <strong>Início</strong> já está 100% pronta.
+                  </p>
+                </div>
 
-          {activeTab === 'solicitacoes' && (
-            <SolicitacoesPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'compra-semana' && (
-            <CompraSemanaPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'entregas' && (
-            <EntregasPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'produtos' && (
-            <ProdutosPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'categorias' && (
-            <CategoriasPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'clientes' && (
-            <ClientesPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'fornecedores' && (
-            <FornecedoresPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'financeiro' && (
-            <FinanceiroPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'relatorios' && (
-            <RelatoriosPage onToast={showToast} onNavigate={handleNavigate} />
-          )}
-
-          {activeTab === 'configuracoes' && (
-            <ConfiguracoesPage onToast={showToast} onNavigate={handleNavigate} />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setActiveTab('inicio')}
+                  style={{ marginTop: '8px' }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Voltar para o Início</span>
+                </button>
+              </div>
+            </div>
           )}
         </main>
       </div>

@@ -3,11 +3,9 @@ import { Logo } from '../brand/Logo'
 import {
   Home,
   ShoppingBag,
-  FileText,
   ShoppingCart,
   Truck,
   Tag,
-  LayoutGrid,
   Users,
   Store,
   CreditCard,
@@ -15,18 +13,17 @@ import {
   Settings
 } from 'lucide-react'
 
-export function Sidebar({ activeItem = 'inicio', onNavigate, onSelectSoon }) {
+export function Sidebar({ activeItem = 'inicio', onNavigate }) {
+  // 10 Abas Canônicas Enxutas da M_I Store
   const menuGroup1 = [
     { id: 'inicio', label: 'Início', icon: Home },
-    { id: 'vendas', label: 'Vendas', icon: ShoppingBag },
-    { id: 'solicitacoes', label: 'Solicitações', icon: FileText },
+    { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
     { id: 'compra-semana', label: 'Compra da Semana', icon: ShoppingCart },
     { id: 'entregas', label: 'Entregas', icon: Truck },
   ]
 
   const menuGroup2 = [
     { id: 'produtos', label: 'Produtos', icon: Tag },
-    { id: 'categorias', label: 'Categorias', icon: LayoutGrid },
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'fornecedores', label: 'Fornecedores', icon: Store },
   ]
@@ -40,13 +37,11 @@ export function Sidebar({ activeItem = 'inicio', onNavigate, onSelectSoon }) {
   const handleItemClick = (item) => {
     if (onNavigate) {
       onNavigate(item.id)
-    } else if (item.id !== 'inicio' && onSelectSoon) {
-      onSelectSoon(item.label)
     }
   }
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" aria-label="Menu Principal">
       <div>
         {/* Logo M_I Store */}
         <div className="sidebar-brand">
@@ -120,7 +115,7 @@ export function Sidebar({ activeItem = 'inicio', onNavigate, onSelectSoon }) {
         <span className="sidebar-quote-text">
           Mais<br />
           que moda,<br />
-          conexões reais. ♡
+          conexões reais. ✨
         </span>
       </div>
     </aside>
